@@ -8,27 +8,27 @@ export default defineConfig({
     host: true,
     proxy: {
       '/auth': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
       '/workspaces': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
       '/endpoints': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
       '/events': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
       '/in': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:4000',
         ws: true,
         changeOrigin: true,
       },

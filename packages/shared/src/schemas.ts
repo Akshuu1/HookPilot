@@ -331,3 +331,59 @@ export const AuditLogResponseSchema = z.object({
 });
 
 export type AuditLogResponse = z.infer<typeof AuditLogResponseSchema>;
+
+// ==========================================
+// Phase 9: API Keys & CLI Tunnel
+// ==========================================
+
+export const CreateApiKeyInputSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(64).trim(),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+});
+
+export type CreateApiKeyInput = z.infer<typeof CreateApiKeyInputSchema>;
+
+export const ApiKeyResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  createdBy: z.string(),
+  lastUsedAt: z.string().datetime().nullable(),
+  revokedAt: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export type ApiKeyResponse = z.infer<typeof ApiKeyResponseSchema>;
+
+export const CreateApiKeyResponseSchema = z.object({
+  apiKey: ApiKeyResponseSchema,
+  secretKey: z.string(),
+});
+
+export type CreateApiKeyResponse = z.infer<typeof CreateApiKeyResponseSchema>;
+
+export const TunnelEventMessageSchema = z.object({
+  eventId: z.string(),
+  endpointId: z.string(),
+  endpointSlug: z.string(),
+  method: z.string(),
+  path: z.string().default('/'),
+  headers: z.record(z.string()),
+  rawBody: z.string(),
+  timeoutMs: z.number().default(15000),
+});
+
+export type TunnelEventMessage = z.infer<typeof TunnelEventMessageSchema>;
+
+export const TunnelResponseMessageSchema = z.object({
+  eventId: z.string(),
+  responseStatus: z.number(),
+  responseHeaders: z.record(z.string()).optional(),
+  responseBodySnippet: z.string().default(''),
+  durationMs: z.number(),
+  error: z.string().nullable().optional(),
+});
+
+export type TunnelResponseMessage = z.infer<typeof TunnelResponseMessageSchema>;

@@ -4,7 +4,11 @@ import { computeBackoff, validateDestinationUrl, type EventPubSubMessage } from 
 import { EventModel, type IEvent } from '../models/Event.js';
 import { EndpointModel } from '../models/Endpoint.js';
 import { DeliveryAttemptModel } from '../models/DeliveryAttempt.js';
-import { performDelivery, classifyResponse } from '../services/delivery.service.js';
+import {
+  performDelivery,
+  performTunnelDelivery,
+  classifyResponse,
+} from '../services/delivery.service.js';
 import { circuitBreaker, type CircuitBreaker } from '../services/circuit-breaker.js';
 import { getRedisClient, getDeliveryQueue } from '../config/redis.js';
 import { logger } from '../config/logger.js';
@@ -134,8 +138,11 @@ export class DeliveryProcessor {
     await event.save();
     await this.publishStatus('event.status_changed', event);
 
-    // 6. Perform delivery with 10s AbortController timeout
-    const deliveryResult = await performDelivery(event, endpoint, attemptNumber);
+    // 6. Check if CLI tunnel session is active first, otherwise deliver to remote destination
+    let deliveryResult = await performTunnelDelivery(event, endpoint, attemptNumber, 15000);
+    if (!deliveryResult) {
+      deliveryResult = await performDelivery(event, endpoint, attemptNumber);
+    }
     const classification = classifyResponse(deliveryResult.status);
 
     // 7. Record attempt
