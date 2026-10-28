@@ -1,8 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { validateDestinationUrl, isPrivateOrReservedIp } from '../ssrf.js';
 import { generateSlug } from '../slug.js';
 
 describe('validateDestinationUrl (SSRF Guard)', () => {
+  const originalEnv = process.env.ALLOW_LOCAL_DESTINATION;
+
+  beforeEach(() => {
+    delete process.env.ALLOW_LOCAL_DESTINATION;
+  });
+
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.ALLOW_LOCAL_DESTINATION = originalEnv;
+    } else {
+      delete process.env.ALLOW_LOCAL_DESTINATION;
+    }
+  });
+
   it('rejects loopback IPv4 (127.0.0.1)', async () => {
     const valid = await validateDestinationUrl('http://127.0.0.1:8000/webhook');
     expect(valid).toBe(false);

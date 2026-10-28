@@ -27,6 +27,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Build Shared Package
+        run: npm run build --workspace=@hookpilot/shared
+
       - name: ESLint Check
         run: npm run lint
 
@@ -67,7 +70,6 @@ jobs:
       JWT_REFRESH_SECRET: hookpilot-ci-jwt-refresh-secret-32-chars-min!
       COOKIE_SECRET: hookpilot-ci-cookie-secret-key-32-chars!
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      ALLOW_LOCAL_DESTINATION: 'true'
 
     steps:
       - name: Checkout Code
@@ -81,6 +83,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Build Shared Package
+        run: npm run build --workspace=@hookpilot/shared
 
       - name: Run Tests with Coverage Enforcement (Services >= 80%)
         run: npm test
