@@ -18,6 +18,9 @@ import type { IEndpoint } from '../models/Endpoint.js';
 async function invalidateEndpointCache(slug: string): Promise<void> {
   try {
     const redis = getRedisClient();
+    if (redis.status !== 'ready') {
+      return;
+    }
     await redis.del(`ep:slug:${slug}`);
   } catch {
     // Non-blocking in environments without active Redis

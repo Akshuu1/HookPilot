@@ -11,6 +11,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
 import { endpointRouter } from './routes/endpoint.routes.js';
 import { ingestRouter } from './routes/ingest.routes.js';
+import { eventRouter } from './routes/event.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -40,6 +41,7 @@ export function createApp(): Express {
   app.use('/auth', authRouter);
   app.use('/workspaces', workspaceRouter);
   app.use('/endpoints', endpointRouter);
+  app.use('/events', eventRouter);
   app.use('/', healthRouter);
 
   // 404 Handler

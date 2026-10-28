@@ -212,6 +212,7 @@ export const EventResponseSchema = z.object({
   idempotencyKey: z.string(),
   status: z.enum(EventStatuses),
   attemptCount: z.number(),
+  replayCount: z.number().default(0),
   lastAttemptAt: z.string().datetime().nullable(),
   nextAttemptAt: z.string().datetime().nullable(),
 });
@@ -250,3 +251,72 @@ export const EventPubSubMessageSchema = z.object({
 });
 
 export type EventPubSubMessage = z.infer<typeof EventPubSubMessageSchema>;
+
+// ==========================================
+// Phase 6: Events API, Search & Replay
+// ==========================================
+
+export const EventFilterQuerySchema = z.object({
+  status: z.enum(EventStatuses).optional(),
+  q: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  signatureValid: z.union([z.boolean(), z.string().transform((val) => val === 'true')]).optional(),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  cursor: z.string().optional(),
+});
+
+export type EventFilterQuery = z.infer<typeof EventFilterQuerySchema>;
+
+export const PaginatedEventsResponseSchema = z.object({
+  events: z.array(EventResponseSchema),
+  nextCursor: z.string().nullable(),
+  hasNextPage: z.boolean(),
+});
+
+export type PaginatedEventsResponse = z.infer<typeof PaginatedEventsResponseSchema>;
+
+export const EventWithAttemptsResponseSchema = EventResponseSchema.extend({
+  attempts: z.array(DeliveryAttemptResponseSchema),
+});
+
+export type EventWithAttemptsResponse = z.infer<typeof EventWithAttemptsResponseSchema>;
+
+export const BulkReplayInputSchema = z.object({
+  workspaceId: z.string(),
+  endpointId: z.string().optional(),
+  status: z.enum(['failed', 'dead']).optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+export type BulkReplayInput = z.infer<typeof BulkReplayInputSchema>;
+
+export const BulkReplayResponseSchema = z.object({
+  replayedCount: z.number(),
+  eventIds: z.array(z.string()),
+});
+
+export type BulkReplayResponse = z.infer<typeof BulkReplayResponseSchema>;
+
+export const ReplayEventResponseSchema = z.object({
+  success: z.boolean(),
+  eventId: z.string(),
+  replayCount: z.number(),
+  jobId: z.string(),
+});
+
+export type ReplayEventResponse = z.infer<typeof ReplayEventResponseSchema>;
+
+export const AuditLogResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  userId: z.string(),
+  action: z.string(),
+  resourceType: z.string(),
+  resourceId: z.string(),
+  metadata: z.record(z.unknown()).optional(),
+  createdAt: z.string().datetime(),
+});
+
+export type AuditLogResponse = z.infer<typeof AuditLogResponseSchema>;

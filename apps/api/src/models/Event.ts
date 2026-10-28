@@ -15,8 +15,11 @@ export interface IEvent extends Document {
   idempotencyKey: string;
   status: EventStatus;
   attemptCount: number;
+  replayCount: number;
+  searchIndex: string;
   lastAttemptAt?: Date | null;
   nextAttemptAt?: Date | null;
+  expiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +42,6 @@ const eventSchema = new Schema<IEvent>(
       type: Date,
       default: Date.now,
       index: true,
-      expires: 30 * 24 * 60 * 60, // 30-day retention TTL index
     },
     method: {
       type: String,
@@ -88,11 +90,23 @@ const eventSchema = new Schema<IEvent>(
       type: Number,
       default: 0,
     },
+    replayCount: {
+      type: Number,
+      default: 0,
+    },
+    searchIndex: {
+      type: String,
+      default: '',
+    },
     lastAttemptAt: {
       type: Date,
       default: null,
     },
     nextAttemptAt: {
+      type: Date,
+      default: null,
+    },
+    expiresAt: {
       type: Date,
       default: null,
     },
@@ -103,8 +117,10 @@ const eventSchema = new Schema<IEvent>(
 );
 
 // Indexes defined in specification:
-eventSchema.index({ endpointId: 1, receivedAt: -1 });
+eventSchema.index({ endpointId: 1, receivedAt: -1, _id: -1 });
 eventSchema.index({ workspaceId: 1, status: 1, receivedAt: -1 });
 eventSchema.index({ endpointId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+eventSchema.index({ searchIndex: 'text', rawBody: 'text' });
+eventSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const EventModel = model<IEvent>('Event', eventSchema);

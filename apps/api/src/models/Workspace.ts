@@ -3,6 +3,7 @@ import { Schema, model, type Document, type Types } from 'mongoose';
 export interface IWorkspace extends Document {
   name: string;
   ownerId: Types.ObjectId;
+  retentionDays: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +21,12 @@ const workspaceSchema = new Schema<IWorkspace>(
       ref: 'User',
       required: true,
       index: true,
+    },
+    retentionDays: {
+      type: Number,
+      default: 30,
+      min: 1,
+      max: 365,
     },
   },
   {
