@@ -17,6 +17,7 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   COOKIE_SECRET: z.string().default('hookpilot-dev-cookie-secret-key-32-chars!'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).optional(),
   ENCRYPTION_KEY: z
     .string()
     .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),

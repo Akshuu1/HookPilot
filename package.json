@@ -15,6 +15,7 @@
     "test": "vitest run --coverage",
     "e2e": "playwright test",
     "loadtest": "k6 run infra/loadtest/webhook-ramp.js",
+    "seed": "npx tsx scripts/seed.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

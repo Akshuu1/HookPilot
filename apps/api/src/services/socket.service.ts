@@ -4,6 +4,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { Redis } from 'ioredis';
 import { EventPubSubMessageSchema, type EventPubSubMessage } from '@hookpilot/shared';
 import { env } from '../config/env.js';
+import { isOriginAllowed } from '../config/cors.js';
 import { logger } from '../config/logger.js';
 import { deliveryAttemptsTotal } from '../config/metrics.js';
 import { socketAuthMiddleware } from '../middlewares/socket-auth.middleware.js';
@@ -41,11 +42,25 @@ export function createSocketServer(
   const membershipRepo = options.membershipRepo || defaultMembershipRepo;
   const endpointRepo = options.endpointRepo || defaultEndpointRepo;
   const redisUrl = options.redisUrl || env.REDIS_URL;
-  const corsOrigin = options.corsOrigin || env.CORS_ORIGIN;
 
   const io: ExtendedSocketServer = new Server(httpServer, {
     cors: {
-      origin: corsOrigin,
+      origin: (origin, callback) => {
+        if (!options.corsOrigin) {
+          if (isOriginAllowed(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error(`Origin '${origin}' not permitted by Socket CORS policy`));
+          }
+        } else {
+          // If explicitly overridden in options (e.g. tests)
+          if (!origin || options.corsOrigin === '*' || options.corsOrigin === origin) {
+            callback(null, true);
+          } else {
+            callback(new Error(`Origin '${origin}' not permitted by Socket CORS policy`));
+          }
+        }
+      },
       credentials: true,
     },
     pingInterval: 25000,

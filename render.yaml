@@ -1,0 +1,74 @@
+services:
+  # ----------------------------------------------------
+  # 1. HookPilot API & Ingestion Service
+  # ----------------------------------------------------
+  - type: web
+    name: hookpilot-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: hookpilot-redis
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: https://hookpilot.vercel.app,http://localhost:5173
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+
+  # ----------------------------------------------------
+  # 2. HookPilot Delivery Worker
+  # ----------------------------------------------------
+  - type: worker
+    name: hookpilot-worker
+    runtime: docker
+    dockerfilePath: ./apps/worker/Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: hookpilot-redis
+          property: connectionString
+      - key: ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: hookpilot-api
+          envVarKey: ENCRYPTION_KEY
+      - key: WORKER_CONCURRENCY
+        value: 20
+
+  # ----------------------------------------------------
+  # 3. HookPilot Redis (Queue & Pub/Sub)
+  # ----------------------------------------------------
+  - type: redis
+    name: hookpilot-redis
+    plan: starter
+    ipAllowList: []

@@ -5,13 +5,19 @@ import { env } from '../config/env.js';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
-export const REFRESH_COOKIE_OPTIONS: CookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/',
+export const getRefreshCookieOptions = (): CookieOptions => {
+  const isProd = env.NODE_ENV === 'production';
+  const sameSite = env.COOKIE_SAME_SITE ?? (isProd ? 'none' : 'lax');
+  return {
+    httpOnly: true,
+    secure: isProd || sameSite === 'none',
+    sameSite,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
+  };
 };
+
+export const REFRESH_COOKIE_OPTIONS: CookieOptions = getRefreshCookieOptions();
 
 export class AuthController {
   constructor(private readonly service: AuthService = defaultAuthService) {}
@@ -21,7 +27,7 @@ export class AuthController {
       const input = RegisterInputSchema.parse(req.body);
       const result = await this.service.register(input);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions());
       res.status(201).json({
         user: result.user,
         accessToken: result.accessToken,
@@ -36,7 +42,7 @@ export class AuthController {
       const input = LoginInputSchema.parse(req.body);
       const result = await this.service.login(input);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions());
       res.status(200).json({
         user: result.user,
         accessToken: result.accessToken,
@@ -51,14 +57,14 @@ export class AuthController {
       const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
       const result = await this.service.refresh(rawToken);
 
-      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions());
       res.status(200).json({
         user: result.user,
         accessToken: result.accessToken,
       });
     } catch (err) {
       // Clear cookie if refresh fails due to reuse or expiry
-      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      res.clearCookie(REFRESH_COOKIE_NAME, { ...getRefreshCookieOptions(), maxAge: undefined });
       next(err);
     }
   };
@@ -68,7 +74,7 @@ export class AuthController {
       const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
       await this.service.logout(rawToken);
 
-      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      res.clearCookie(REFRESH_COOKIE_NAME, { ...getRefreshCookieOptions(), maxAge: undefined });
       res.status(200).json({ message: 'Logged out successfully' });
     } catch (err) {
       next(err);

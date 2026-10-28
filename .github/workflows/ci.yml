@@ -1,0 +1,143 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Code Hygiene & Types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: ESLint Check
+        run: npm run lint
+
+      - name: Prettier Check
+        run: npm run format:check
+
+      - name: TypeScript Compilation Check
+        run: npm run typecheck
+
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 5
+
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 5
+
+    env:
+      MONGODB_URI: mongodb://localhost:27017/hookpilot_test
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: hookpilot-ci-jwt-access-secret-32-chars-min!
+      JWT_REFRESH_SECRET: hookpilot-ci-jwt-refresh-secret-32-chars-min!
+      COOKIE_SECRET: hookpilot-ci-cookie-secret-key-32-chars!
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      ALLOW_LOCAL_DESTINATION: 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests with Coverage Enforcement (Services >= 80%)
+        run: npm test
+
+  build-and-push:
+    name: Build & Push Docker Images
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Image Prefix (Lowercase)
+        run: |
+          echo "IMAGE_PREFIX=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/api:latest
+            ${{ env.IMAGE_PREFIX }}/api:${{ github.sha }}
+
+      - name: Build & Push Worker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/worker/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/worker:latest
+            ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
+
+      - name: Build & Push Web Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/web:latest
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
