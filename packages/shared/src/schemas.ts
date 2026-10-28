@@ -240,7 +240,7 @@ export const DeliveryAttemptResponseSchema = z.object({
 export type DeliveryAttemptResponse = z.infer<typeof DeliveryAttemptResponseSchema>;
 
 export const EventPubSubMessageSchema = z.object({
-  type: z.enum(['event.status_changed', 'event.dead']),
+  type: z.enum(['event.created', 'event.status_changed', 'event.dead']),
   eventId: z.string(),
   endpointId: z.string(),
   workspaceId: z.string(),

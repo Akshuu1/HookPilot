@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { getRedisClient, disconnectRedis } from './config/redis.js';
+import { createSocketServer } from './services/socket.service.js';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -18,6 +19,7 @@ async function bootstrap(): Promise<void> {
     });
 
     const server = createServer(app);
+    const io = createSocketServer(server);
 
     server.listen(env.PORT, () => {
       logger.info({ port: env.PORT, env: env.NODE_ENV }, 'HookPilot API listening');
@@ -29,6 +31,7 @@ async function bootstrap(): Promise<void> {
 
       server.close(async () => {
         logger.info('HTTP server closed');
+        await io.cleanup?.();
         await Promise.allSettled([disconnectDatabase(), disconnectRedis()]);
         logger.info('All connections closed. Exiting process.');
         process.exit(0);

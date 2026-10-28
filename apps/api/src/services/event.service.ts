@@ -8,6 +8,7 @@ import {
   type BulkReplayInput,
   type BulkReplayResponse,
   type ReplayEventResponse,
+  type EventPubSubMessage,
 } from '@hookpilot/shared';
 import {
   type EventRepository,
@@ -18,6 +19,7 @@ import {
   auditLogRepository as defaultAuditLogRepo,
 } from '../repositories/audit-log.repository.js';
 import { getDeliveryQueue } from '../config/queue.js';
+import { getRedisClient } from '../config/redis.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { IEvent } from '../models/Event.js';
 import type { IDeliveryAttempt } from '../models/DeliveryAttempt.js';
@@ -144,6 +146,25 @@ export class EventService {
       );
     } catch {
       // Allow persistence to stand in tests without active queue
+    }
+
+    // Publish event.status_changed to Redis 'events'
+    try {
+      const redis = getRedisClient();
+      if (redis.status === 'ready' || redis.status === 'connecting') {
+        const pubSubPayload: EventPubSubMessage = {
+          type: 'event.status_changed',
+          eventId: updatedId,
+          endpointId: updated.endpointId.toString(),
+          workspaceId: updated.workspaceId.toString(),
+          status: updated.status,
+          attemptCount: updated.attemptCount,
+          timestamp: new Date().toISOString(),
+        };
+        await redis.publish('events', JSON.stringify(pubSubPayload));
+      }
+    } catch {
+      // Non-blocking in test / offline environments
     }
 
     // Write audit log

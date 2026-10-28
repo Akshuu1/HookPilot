@@ -1,4 +1,4 @@
-import { redactHeaders } from '@hookpilot/shared';
+import { redactHeaders, type EventPubSubMessage } from '@hookpilot/shared';
 import { AppError } from '../middlewares/error-handler.js';
 import {
   type EndpointRepository,
@@ -159,6 +159,27 @@ export class IngestService {
         );
       } catch {
         // In environments without Redis (e.g. basic unit tests), let persistence stand
+      }
+    }
+
+    // Publish event.created to Redis 'events' channel for realtime Socket.IO emission
+    if (!isDuplicate) {
+      try {
+        const redis = getRedisClient();
+        if (redis.status === 'ready' || redis.status === 'connecting') {
+          const pubSubMessage: EventPubSubMessage = {
+            type: 'event.created',
+            eventId,
+            endpointId,
+            workspaceId,
+            status: event.status,
+            attemptCount: event.attemptCount,
+            timestamp: event.receivedAt ? event.receivedAt.toISOString() : new Date().toISOString(),
+          };
+          await redis.publish('events', JSON.stringify(pubSubMessage));
+        }
+      } catch {
+        // Non-blocking in environments without active Redis
       }
     }
 
