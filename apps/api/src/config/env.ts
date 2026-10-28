@@ -10,6 +10,13 @@ const envSchema = z.object({
   MONGODB_URI: z.string().default('mongodb://localhost:27017/hookpilot'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
+  // Auth & Security
+  JWT_ACCESS_SECRET: z.string().default('hookpilot-dev-jwt-access-secret-32-chars-min!'),
+  JWT_REFRESH_SECRET: z.string().default('hookpilot-dev-jwt-refresh-secret-32-chars-min!'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  COOKIE_SECRET: z.string().default('hookpilot-dev-cookie-secret-key-32-chars!'),
 });
 
 const parsed = envSchema.safeParse(process.env);

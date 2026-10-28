@@ -1,11 +1,14 @@
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { requestIdMiddleware } from './middlewares/request-id.js';
 import { httpLogger } from './middlewares/logger.js';
 import { errorHandler, AppError } from './middlewares/error-handler.js';
 import { healthRouter } from './routes/health.routes.js';
+import { authRouter } from './routes/auth.routes.js';
+import { workspaceRouter } from './routes/workspace.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -20,12 +23,15 @@ export function createApp(): Express {
   );
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(cookieParser(env.COOKIE_SECRET));
 
   // Tracing & logging
   app.use(requestIdMiddleware);
   app.use(httpLogger);
 
-  // Routes
+  // Application Routes
+  app.use('/auth', authRouter);
+  app.use('/workspaces', workspaceRouter);
   app.use('/', healthRouter);
 
   // 404 Handler
