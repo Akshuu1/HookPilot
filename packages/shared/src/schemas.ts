@@ -70,6 +70,7 @@ export type LoginInput = z.infer<typeof LoginInputSchema>;
 
 export const CreateWorkspaceInputSchema = z.object({
   name: z.string().min(1, 'Workspace name is required').max(64).trim(),
+  retentionDays: z.number().int().min(1).max(365).optional(),
 });
 
 export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceInputSchema>;
@@ -96,11 +97,21 @@ export const UserResponseSchema = z.object({
 
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 
+export const AuthResponseSchema = z.object({
+  user: UserResponseSchema,
+  accessToken: z.string(),
+});
+
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+export const LoginResponseSchema = AuthResponseSchema;
+export type LoginResponse = AuthResponse;
+
 export const WorkspaceResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   ownerId: z.string(),
   role: z.enum(WorkspaceRoles),
+  retentionDays: z.number().int().min(1).max(365).optional(),
   createdAt: z.string().datetime(),
 });
 
