@@ -181,7 +181,7 @@ export function EventInspectorPage() {
             ...oldData,
             pages: oldData.pages.map((page: PaginatedEventsResponse) => ({
               ...page,
-              events: page.events.map((evt) =>
+              events: page.events.map((evt: EventResponse) =>
                 evt.id === msg.eventId
                   ? {
                       ...evt,

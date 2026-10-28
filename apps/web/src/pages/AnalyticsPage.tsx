@@ -365,16 +365,18 @@ export function AnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
-                    {analytics.topFailures.map((failure, idx) => (
-                      <tr key={idx} className="hover:bg-slate-850/50">
-                        <td className="px-4 py-3 font-mono text-xs text-rose-300">
-                          {failure.reason}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-white">
-                          {failure.count}
-                        </td>
-                      </tr>
-                    ))}
+                    {analytics.topFailures.map(
+                      (failure: { reason: string; count: number }, idx: number) => (
+                        <tr key={idx} className="hover:bg-slate-850/50">
+                          <td className="px-4 py-3 font-mono text-xs text-rose-300">
+                            {failure.reason}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-white">
+                            {failure.count}
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>

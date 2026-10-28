@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "npm run build --workspace=@hookpilot/web",
+  "buildCommand": "npm run build --workspace=@hookpilot/shared && npm run build --workspace=@hookpilot/web",
   "outputDirectory": "dist",
   "rewrites": [
     {

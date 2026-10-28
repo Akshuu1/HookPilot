@@ -12,6 +12,7 @@
     "dev:worker": "npm run dev --workspace=@hookpilot/worker",
     "dev:web": "npm run dev --workspace=@hookpilot/web",
     "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=@hookpilot/shared && npm run build --workspace=@hookpilot/web",
     "test": "vitest run --coverage",
     "e2e": "playwright test",
     "loadtest": "k6 run infra/loadtest/webhook-ramp.js",
