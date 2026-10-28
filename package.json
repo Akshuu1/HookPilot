@@ -21,7 +21,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "prepare": "husky"
+    "prepare": "node -e \"if (!process.env.CI && !process.env.VERCEL && process.env.NODE_ENV !== 'production') { try { (await import('child_process')).execSync('husky', { stdio: 'ignore' }); } catch {} }\""
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

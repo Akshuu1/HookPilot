@@ -169,3 +169,4 @@ HookPilot provides native telemetry out of the box:
   * `dlq_size`: Gauge tracking quarantined dead-letter events.
 * **Grafana Dashboards**: Provisioned JSON dashboards in `infra/grafana` visualizing ingestion rates, p50/p95 latency percentiles, and delivery success curves.
 * **MongoDB Time-Series Analytics**: Aggregation queries using `$dateTrunc` and `$percentile` providing 1h, 24h, and 7d historical performance insights.
+
