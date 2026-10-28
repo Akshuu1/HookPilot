@@ -6,6 +6,7 @@ import { AppLayout } from './components/layout/AppLayout.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { EndpointsPage } from './pages/EndpointsPage.js';
 import { EventInspectorPage } from './pages/EventInspectorPage.js';
+import { AnalyticsPage } from './pages/AnalyticsPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { LoadingSpinner } from './components/common/LoadingSpinner.js';
 
@@ -72,6 +73,7 @@ export function App() {
           <Route path="/" element={<Navigate to="/endpoints" replace />} />
           <Route path="/endpoints" element={<EndpointsPage />} />
           <Route path="/events" element={<EventInspectorPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/endpoints" replace />} />
         </Route>

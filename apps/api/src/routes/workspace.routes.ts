@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { workspaceController } from '../controllers/workspace.controller.js';
 import { endpointController } from '../controllers/endpoint.controller.js';
 import { apiKeyController } from '../controllers/api-key.controller.js';
+import { analyticsController } from '../controllers/analytics.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { requireRole } from '../middlewares/role.middleware.js';
 
@@ -38,3 +39,6 @@ workspaceRouter.get('/:id/endpoints', requireRole('viewer'), endpointController.
 workspaceRouter.post('/:id/api-keys', requireRole('admin'), apiKeyController.create);
 workspaceRouter.get('/:id/api-keys', requireRole('member'), apiKeyController.list);
 workspaceRouter.delete('/:id/api-keys/:keyId', requireRole('admin'), apiKeyController.revoke);
+
+// Analytics scoped to workspace:
+workspaceRouter.get('/:id/analytics', requireRole('viewer'), analyticsController.getAnalytics);

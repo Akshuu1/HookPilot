@@ -387,3 +387,62 @@ export const TunnelResponseMessageSchema = z.object({
 });
 
 export type TunnelResponseMessage = z.infer<typeof TunnelResponseMessageSchema>;
+
+// ==========================================
+// Phase 10: Analytics & Observability
+// ==========================================
+
+export const AnalyticsRangeSchema = z.enum(['1h', '24h', '7d']).default('24h');
+export type AnalyticsRange = z.infer<typeof AnalyticsRangeSchema>;
+
+export const AnalyticsQuerySchema = z.object({
+  range: AnalyticsRangeSchema,
+  endpointId: z.string().optional(),
+});
+
+export type AnalyticsQuery = z.infer<typeof AnalyticsQuerySchema>;
+
+export const AnalyticsSummarySchema = z.object({
+  total: z.number(),
+  delivered: z.number(),
+  failed: z.number(),
+  pending: z.number(),
+  successRate: z.number(),
+});
+
+export type AnalyticsSummary = z.infer<typeof AnalyticsSummarySchema>;
+
+export const AnalyticsTimeseriesPointSchema = z.object({
+  timestamp: z.string(),
+  total: z.number(),
+  delivered: z.number(),
+  failed: z.number(),
+});
+
+export type AnalyticsTimeseriesPoint = z.infer<typeof AnalyticsTimeseriesPointSchema>;
+
+export const AnalyticsLatencyPercentilesSchema = z.object({
+  p50: z.number(),
+  p95: z.number(),
+  p99: z.number(),
+});
+
+export type AnalyticsLatencyPercentiles = z.infer<typeof AnalyticsLatencyPercentilesSchema>;
+
+export const AnalyticsFailureReasonSchema = z.object({
+  reason: z.string(),
+  count: z.number(),
+});
+
+export type AnalyticsFailureReason = z.infer<typeof AnalyticsFailureReasonSchema>;
+
+export const AnalyticsResponseSchema = z.object({
+  range: AnalyticsRangeSchema,
+  summary: AnalyticsSummarySchema,
+  timeseries: z.array(AnalyticsTimeseriesPointSchema),
+  latency: AnalyticsLatencyPercentilesSchema,
+  topFailures: z.array(AnalyticsFailureReasonSchema),
+  cached: z.boolean().default(false),
+});
+
+export type AnalyticsResponse = z.infer<typeof AnalyticsResponseSchema>;

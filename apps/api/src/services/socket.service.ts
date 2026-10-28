@@ -5,6 +5,7 @@ import { Redis } from 'ioredis';
 import { EventPubSubMessageSchema, type EventPubSubMessage } from '@hookpilot/shared';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { deliveryAttemptsTotal } from '../config/metrics.js';
 import { socketAuthMiddleware } from '../middlewares/socket-auth.middleware.js';
 import {
   type MembershipRepository,
@@ -124,6 +125,13 @@ export function createSocketServer(
           io.local.to(room).emit('event:created', data);
         } else {
           // 'event.status_changed', 'event.dead', or other updates
+          const resLabel =
+            data.status === 'delivered'
+              ? 'success'
+              : data.status === 'dead'
+                ? 'permanent'
+                : 'retryable';
+          deliveryAttemptsTotal.inc({ endpoint: data.endpointId, result: resLabel });
           io.local.to(room).emit('event:update', data);
         }
       } catch (parseErr) {

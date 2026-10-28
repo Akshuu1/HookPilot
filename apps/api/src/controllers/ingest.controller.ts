@@ -4,13 +4,17 @@ import {
   IngestService,
   ingestService as defaultIngestService,
 } from '../services/ingest.service.js';
+import { ingestRequestsTotal, ingestDurationSeconds } from '../config/metrics.js';
+import { logger } from '../config/logger.js';
 
 export class IngestController {
   constructor(private readonly service: IngestService = defaultIngestService) {}
 
   ingest = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const startTime = process.hrtime();
+    const slug = String(req.params.slug);
+
     try {
-      const slug = String(req.params.slug);
       const rawBody = req.rawBody || '';
       const rawBodyBuffer = req.rawBodyBuffer || Buffer.from(rawBody, 'utf8');
 
@@ -19,6 +23,7 @@ export class IngestController {
 
       const isAllowed = await checkEndpointRateLimit(endpoint.id, endpoint.rateLimitPerMin, res);
       if (!isAllowed) {
+        ingestRequestsTotal.inc({ endpoint: slug, status: '429' });
         return;
       }
 
@@ -39,11 +44,32 @@ export class IngestController {
         sourceIp,
       });
 
+      const [seconds, nanoseconds] = process.hrtime(startTime);
+      const duration = seconds + nanoseconds / 1e9;
+      ingestRequestsTotal.inc({ endpoint: slug, status: '202' });
+      ingestDurationSeconds.observe({ endpoint: slug }, duration);
+
+      logger.info(
+        {
+          requestId: req.id,
+          eventId: result.eventId,
+          slug,
+          durationMs: Math.round(duration * 1000),
+        },
+        'Webhook ingested successfully',
+      );
+
       // 202 Accepted response with eventId
       res.status(202).json({
         eventId: result.eventId,
       });
     } catch (err) {
+      const [seconds, nanoseconds] = process.hrtime(startTime);
+      const duration = seconds + nanoseconds / 1e9;
+      const status = (err as { statusCode?: number })?.statusCode || 500;
+      ingestRequestsTotal.inc({ endpoint: slug || 'unknown', status: status.toString() });
+      ingestDurationSeconds.observe({ endpoint: slug || 'unknown' }, duration);
+
       next(err);
     }
   };

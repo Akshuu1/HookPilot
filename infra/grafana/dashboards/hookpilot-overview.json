@@ -1,0 +1,373 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Real-time Platform Health & Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(ingest_requests_total[1m])) or vector(0)",
+          "legendFormat": "Ingest Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Live Ingest Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "queue_depth or vector(0)",
+          "legendFormat": "Queue Depth",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Queue Depth (Active + Waiting)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "dlq_size or vector(0)",
+          "legendFormat": "Dead Letters",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "DLQ Size (Dead Events)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.5 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(ingest_duration_seconds_bucket[5m])) by (le)) or vector(0)",
+          "legendFormat": "p95 Ingest Latency",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Ingest Latency (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (endpoint, status) (rate(ingest_requests_total[1m]))",
+          "legendFormat": "{{endpoint}} (HTTP {{status}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Ingest Rate by Endpoint & Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (result) (rate(delivery_attempts_total[1m]))",
+          "legendFormat": "Delivery: {{result}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Delivery Attempts by Outcome",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["hookpilot", "webhooks", "observability"],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+  },
+  "timezone": "browser",
+  "title": "HookPilot System Overview",
+  "uid": "hookpilot-system-overview",
+  "version": 1
+}
