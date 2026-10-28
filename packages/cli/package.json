@@ -1,0 +1,17 @@
+{
+  "name": "hookpilot",
+  "version": "0.1.0",
+  "description": "HookPilot CLI tunnel client",
+  "type": "module",
+  "bin": {
+    "hookpilot": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.1"
+  }
+}
