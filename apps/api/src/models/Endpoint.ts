@@ -15,6 +15,7 @@ export interface IEndpoint extends Document {
     provider: SignatureProvider;
     secretEncrypted?: string | null;
     headerName?: string | null;
+    enforce?: boolean;
   };
   retryPolicy: {
     maxAttempts: number;
@@ -68,6 +69,10 @@ const endpointSchema = new Schema<IEndpoint>(
       headerName: {
         type: String,
         default: null,
+      },
+      enforce: {
+        type: Boolean,
+        default: false,
       },
     },
     retryPolicy: {

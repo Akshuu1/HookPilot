@@ -10,11 +10,12 @@ import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
 import { endpointRouter } from './routes/endpoint.routes.js';
+import { ingestRouter } from './routes/ingest.routes.js';
 
 export function createApp(): Express {
   const app = express();
 
-  // Security & parsing
+  // Security
   app.use(helmet());
   app.use(
     cors({
@@ -22,15 +23,20 @@ export function createApp(): Express {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-  app.use(cookieParser(env.COOKIE_SECRET));
 
   // Tracing & logging
   app.use(requestIdMiddleware);
   app.use(httpLogger);
 
-  // Application Routes
+  // PUBLIC INGEST ROUTE: Mounted BEFORE the JSON body parser to capture exact raw bytes!
+  app.use('/in', ingestRouter);
+
+  // Body parsing for API / Dashboard routes
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(cookieParser(env.COOKIE_SECRET));
+
+  // Dashboard & Management Routes
   app.use('/auth', authRouter);
   app.use('/workspaces', workspaceRouter);
   app.use('/endpoints', endpointRouter);

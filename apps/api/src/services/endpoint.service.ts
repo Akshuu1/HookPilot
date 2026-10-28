@@ -12,7 +12,17 @@ import {
   endpointRepository as defaultEndpointRepo,
 } from '../repositories/endpoint.repository.js';
 import { encryptSecret, decryptSecret, maskSecret } from '../utils/crypto.js';
+import { getRedisClient } from '../config/redis.js';
 import type { IEndpoint } from '../models/Endpoint.js';
+
+async function invalidateEndpointCache(slug: string): Promise<void> {
+  try {
+    const redis = getRedisClient();
+    await redis.del(`ep:slug:${slug}`);
+  } catch {
+    // Non-blocking in environments without active Redis
+  }
+}
 
 export class EndpointService {
   constructor(private readonly endpointRepo: EndpointRepository = defaultEndpointRepo) {}
@@ -59,6 +69,7 @@ export class EndpointService {
         provider: input.signatureConfig?.provider || 'none',
         secretEncrypted,
         headerName: input.signatureConfig?.headerName || null,
+        enforce: input.signatureConfig?.enforce ?? false,
       },
       retryPolicy: {
         maxAttempts: input.retryPolicy?.maxAttempts ?? 8,
@@ -135,6 +146,7 @@ export class EndpointService {
       throw new AppError('Failed to update endpoint', 500, 'UPDATE_FAILED');
     }
 
+    await invalidateEndpointCache(updated.slug);
     return this.toResponse(updated);
   }
 
@@ -144,6 +156,7 @@ export class EndpointService {
       throw new AppError('Endpoint not found', 404, 'NOT_FOUND');
     }
     await this.endpointRepo.delete(id);
+    await invalidateEndpointCache(endpoint.slug);
   }
 
   async rotateSecret(
@@ -164,6 +177,8 @@ export class EndpointService {
         secretEncrypted,
       },
     });
+
+    await invalidateEndpointCache(endpoint.slug);
 
     return {
       secret: rawSecret,
@@ -191,6 +206,7 @@ export class EndpointService {
         provider: endpoint.signatureConfig.provider,
         secretMasked: maskSecret(rawSecret),
         headerName: endpoint.signatureConfig.headerName ?? null,
+        enforce: endpoint.signatureConfig.enforce ?? false,
       },
       retryPolicy: {
         maxAttempts: endpoint.retryPolicy.maxAttempts,

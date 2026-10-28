@@ -128,6 +128,7 @@ export const SignatureConfigInputSchema = z.object({
   provider: z.enum(SignatureProviders).default('none'),
   secret: z.string().optional(),
   headerName: z.string().optional(),
+  enforce: z.boolean().default(false),
 });
 
 export type SignatureConfigInput = z.infer<typeof SignatureConfigInputSchema>;
@@ -171,6 +172,7 @@ export const EndpointResponseSchema = z.object({
     provider: z.enum(SignatureProviders),
     secretMasked: z.string().nullable(),
     headerName: z.string().optional().nullable(),
+    enforce: z.boolean().default(false),
   }),
   retryPolicy: RetryPolicySchema,
   rateLimitPerMin: z.number(),
@@ -181,3 +183,37 @@ export const EndpointResponseSchema = z.object({
 });
 
 export type EndpointResponse = z.infer<typeof EndpointResponseSchema>;
+
+// ==========================================
+// Phase 4: Ingest & Event Module
+// ==========================================
+
+export const EventStatuses = ['pending', 'delivering', 'delivered', 'failed', 'dead'] as const;
+export type EventStatus = (typeof EventStatuses)[number];
+
+export const IngestResponseSchema = z.object({
+  eventId: z.string(),
+});
+
+export type IngestResponse = z.infer<typeof IngestResponseSchema>;
+
+export const EventResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  endpointId: z.string(),
+  receivedAt: z.string().datetime(),
+  method: z.string(),
+  headers: z.record(z.string()),
+  rawBody: z.string(),
+  bodySize: z.number(),
+  contentType: z.string().nullable(),
+  sourceIp: z.string(),
+  signatureValid: z.boolean(),
+  idempotencyKey: z.string(),
+  status: z.enum(EventStatuses),
+  attemptCount: z.number(),
+  lastAttemptAt: z.string().datetime().nullable(),
+  nextAttemptAt: z.string().datetime().nullable(),
+});
+
+export type EventResponse = z.infer<typeof EventResponseSchema>;

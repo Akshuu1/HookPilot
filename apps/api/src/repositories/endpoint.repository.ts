@@ -11,6 +11,7 @@ export interface CreateEndpointData {
     provider: SignatureProvider;
     secretEncrypted?: string | null;
     headerName?: string | null;
+    enforce?: boolean;
   };
   retryPolicy?: {
     maxAttempts: number;
