@@ -176,3 +176,4 @@ Demo access credentials:
 * **Email**: `demo@hookpilot.dev`
 * **Password**: `Password123!`
 * **Endpoints**: `/in/stripe-payments`, `/in/shopify-orders`, `/in/github-actions`
+
