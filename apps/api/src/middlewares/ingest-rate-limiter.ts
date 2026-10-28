@@ -2,8 +2,23 @@ import type { Response } from 'express';
 import { getRedisClient } from '../config/redis.js';
 import { env } from '../config/env.js';
 
+// Pre-define Lua script for atomic sliding window evaluation in 1 network round-trip
+const SLIDING_WINDOW_LUA = `
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+local currentHits = redis.call('ZCARD', KEYS[1])
+if currentHits >= tonumber(ARGV[4]) then
+  local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+  local oldestScore = oldest[2] or ARGV[2]
+  return { 0, tonumber(oldestScore) }
+else
+  redis.call('ZADD', KEYS[1], ARGV[2], ARGV[3])
+  redis.call('EXPIRE', KEYS[1], tonumber(ARGV[5]))
+  return { 1, currentHits + 1 }
+end
+`;
+
 /**
- * Sliding-window rate limiter per endpoint using Redis sorted sets.
+ * Sliding-window rate limiter per endpoint using atomic Redis Lua script.
  * If limit is exceeded, responds 429 with Retry-After header.
  */
 export async function checkEndpointRateLimit(
@@ -20,24 +35,24 @@ export async function checkEndpointRateLimit(
     const key = `rl:endpoint:${endpointId}`;
     const now = Date.now();
     const windowStart = now - 60000; // 60-second sliding window
+    const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
 
-    // Remove expired entries
-    await redis.zremrangebyscore(key, 0, windowStart);
+    const result = (await redis.eval(
+      SLIDING_WINDOW_LUA,
+      1,
+      key,
+      windowStart,
+      now,
+      member,
+      rateLimitPerMin,
+      65,
+    )) as [number, number];
 
-    // Count hits in current window
-    const currentHits = await redis.zcard(key);
+    const [allowed, oldestOrCount] = result;
 
-    if (currentHits >= rateLimitPerMin) {
-      // Find oldest entry in current window to calculate Retry-After
-      const oldestEntries = await redis.zrange(key, 0, 0, 'WITHSCORES');
-      let retryAfterSec = 60;
-      if (oldestEntries.length >= 2) {
-        const oldestScore = parseInt(oldestEntries[1]!, 10);
-        if (!Number.isNaN(oldestScore)) {
-          const waitMs = oldestScore + 60000 - now;
-          retryAfterSec = Math.max(1, Math.ceil(waitMs / 1000));
-        }
-      }
+    if (allowed === 0) {
+      const waitMs = oldestOrCount + 60000 - now;
+      const retryAfterSec = Math.max(1, Math.ceil(waitMs / 1000));
 
       res.setHeader('Retry-After', retryAfterSec.toString());
       res.status(429).json({
@@ -49,11 +64,6 @@ export async function checkEndpointRateLimit(
       });
       return false;
     }
-
-    // Record this hit
-    const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
-    await redis.zadd(key, now, member);
-    await redis.expire(key, 65); // Expire slightly after the window
 
     return true;
   } catch {

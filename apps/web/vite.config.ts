@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+import type { IncomingMessage } from 'node:http';
+
+const spaBypass = (req: IncomingMessage) =>
+  req.headers.accept?.includes('text/html') ? '/index.html' : null;
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -10,18 +15,22 @@ export default defineConfig({
       '/auth': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        bypass: spaBypass,
       },
       '/workspaces': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        bypass: spaBypass,
       },
       '/endpoints': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        bypass: spaBypass,
       },
       '/events': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        bypass: spaBypass,
       },
       '/in': {
         target: 'http://localhost:4000',

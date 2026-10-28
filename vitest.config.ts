@@ -5,10 +5,16 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts', '**/*.spec.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/*.e2e.*'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      include: ['apps/*/src/services/**'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        statements: 80,
+      },
     },
   },
 });

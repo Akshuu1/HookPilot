@@ -96,7 +96,7 @@ const endpointSchema = new Schema<IEndpoint>(
       type: Number,
       default: 60,
       min: 1,
-      max: 10000,
+      max: 1000000,
     },
     isActive: {
       type: Boolean,

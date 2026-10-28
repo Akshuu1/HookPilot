@@ -149,7 +149,7 @@ export const CreateEndpointInputSchema = z.object({
   destinationUrl: z.string().url('Invalid destination URL').trim(),
   signatureConfig: SignatureConfigInputSchema.optional(),
   retryPolicy: RetryPolicySchema.optional(),
-  rateLimitPerMin: z.number().int().min(1).max(10000).default(60),
+  rateLimitPerMin: z.number().int().min(1).max(1000000).default(60),
   mode: z.enum(EndpointModes).default('forward'),
 });
 
@@ -160,7 +160,7 @@ export const UpdateEndpointInputSchema = z.object({
   destinationUrl: z.string().url().trim().optional(),
   signatureConfig: SignatureConfigInputSchema.optional(),
   retryPolicy: RetryPolicySchema.optional(),
-  rateLimitPerMin: z.number().int().min(1).max(10000).optional(),
+  rateLimitPerMin: z.number().int().min(1).max(1000000).optional(),
   isActive: z.boolean().optional(),
   mode: z.enum(EndpointModes).optional(),
 });
