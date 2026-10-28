@@ -4,6 +4,7 @@ import { registry, updateGauges } from '../config/metrics.js';
 
 export const healthRouter = Router();
 
+healthRouter.get('/', healthController.getRoot);
 healthRouter.get('/health', healthController.getHealth);
 healthRouter.get('/ready', healthController.getReady);
 
