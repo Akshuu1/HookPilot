@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Radio, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import { authApi } from '../api/auth.api.js';
+import { API_URL } from '../api/client.js';
 import { useAuthStore } from '../store/auth.store.js';
 import { ErrorAlert } from '../components/common/ErrorAlert.js';
 
@@ -38,11 +39,21 @@ export function LoginPage() {
       }
       navigate('/endpoints');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
-      setError(
-        axiosErr.response?.data?.error?.message ||
-          'Authentication failed. Please check your credentials.',
-      );
+      const axiosErr = err as {
+        message?: string;
+        response?: { data?: { error?: { message?: string }; message?: string } };
+      };
+      if (!axiosErr.response) {
+        setError(
+          `Unable to connect to backend at ${API_URL}. If you just added VITE_API_URL on Vercel, please trigger a Redeploy so the frontend picks it up.`,
+        );
+      } else {
+        setError(
+          axiosErr.response.data?.error?.message ||
+            axiosErr.response.data?.message ||
+            'Invalid email or password. If you do not have an account yet, please click Sign Up below.',
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }

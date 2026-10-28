@@ -17,6 +17,15 @@ export function isOriginAllowed(origin: string | undefined): boolean {
   // Allow requests with no origin header (e.g. mobile apps, curl, server-to-server)
   if (!origin) return true;
 
+  // Automatically allow all Vercel domains (production, preview, branch URLs)
+  if (/^https:\/\/([a-zA-Z0-9-_.]+\.)?vercel\.app$/.test(origin)) return true;
+
+  // Automatically allow localhost on any port
+  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
+
+  // Automatically allow Render domains
+  if (/^https:\/\/([a-zA-Z0-9-_.]+\.)?onrender\.com$/.test(origin)) return true;
+
   const allowedOrigins = getCorsOrigins();
   if (allowedOrigins.includes('*')) return true;
 
