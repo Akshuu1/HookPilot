@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { workspaceController } from '../controllers/workspace.controller.js';
+import { endpointController } from '../controllers/endpoint.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { requireRole } from '../middlewares/role.middleware.js';
 
@@ -23,3 +24,9 @@ workspaceRouter.delete(
   requireRole('admin'),
   workspaceController.removeMember,
 );
+
+// Endpoints scoped to workspace:
+// - Member or above can create
+// - Viewer or above can list
+workspaceRouter.post('/:id/endpoints', requireRole('member'), endpointController.create);
+workspaceRouter.get('/:id/endpoints', requireRole('viewer'), endpointController.list);

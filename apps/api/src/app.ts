@@ -9,6 +9,7 @@ import { errorHandler, AppError } from './middlewares/error-handler.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { workspaceRouter } from './routes/workspace.routes.js';
+import { endpointRouter } from './routes/endpoint.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -32,6 +33,7 @@ export function createApp(): Express {
   // Application Routes
   app.use('/auth', authRouter);
   app.use('/workspaces', workspaceRouter);
+  app.use('/endpoints', endpointRouter);
   app.use('/', healthRouter);
 
   // 404 Handler

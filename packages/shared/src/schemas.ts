@@ -49,9 +49,6 @@ export const ROLE_HIERARCHY: Record<WorkspaceRole, number> = {
   viewer: 10,
 };
 
-/**
- * Checks whether userRole satisfies the minimum required role level.
- */
 export function hasRequiredRole(userRole: WorkspaceRole, minRole: WorkspaceRole): boolean {
   return (ROLE_HIERARCHY[userRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0);
 }
@@ -108,3 +105,79 @@ export const WorkspaceResponseSchema = z.object({
 });
 
 export type WorkspaceResponse = z.infer<typeof WorkspaceResponseSchema>;
+
+// ==========================================
+// Phase 3: Endpoint Module
+// ==========================================
+
+export const SignatureProviders = ['none', 'stripe', 'github', 'generic'] as const;
+export type SignatureProvider = (typeof SignatureProviders)[number];
+
+export const EndpointModes = ['forward', 'capture-only'] as const;
+export type EndpointMode = (typeof EndpointModes)[number];
+
+export const RetryPolicySchema = z.object({
+  maxAttempts: z.number().int().min(1).max(20).default(8),
+  baseDelayMs: z.number().int().min(100).max(60000).default(1000),
+  maxDelayMs: z.number().int().min(1000).max(86400000).default(3600000),
+});
+
+export type RetryPolicy = z.infer<typeof RetryPolicySchema>;
+
+export const SignatureConfigInputSchema = z.object({
+  provider: z.enum(SignatureProviders).default('none'),
+  secret: z.string().optional(),
+  headerName: z.string().optional(),
+});
+
+export type SignatureConfigInput = z.infer<typeof SignatureConfigInputSchema>;
+
+export const CreateEndpointInputSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(64).trim(),
+  destinationUrl: z.string().url('Invalid destination URL').trim(),
+  signatureConfig: SignatureConfigInputSchema.optional(),
+  retryPolicy: RetryPolicySchema.optional(),
+  rateLimitPerMin: z.number().int().min(1).max(10000).default(60),
+  mode: z.enum(EndpointModes).default('forward'),
+});
+
+export type CreateEndpointInput = z.infer<typeof CreateEndpointInputSchema>;
+
+export const UpdateEndpointInputSchema = z.object({
+  name: z.string().min(1).max(64).trim().optional(),
+  destinationUrl: z.string().url().trim().optional(),
+  signatureConfig: SignatureConfigInputSchema.optional(),
+  retryPolicy: RetryPolicySchema.optional(),
+  rateLimitPerMin: z.number().int().min(1).max(10000).optional(),
+  isActive: z.boolean().optional(),
+  mode: z.enum(EndpointModes).optional(),
+});
+
+export type UpdateEndpointInput = z.infer<typeof UpdateEndpointInputSchema>;
+
+export const RotateSecretInputSchema = z.object({
+  secret: z.string().min(8, 'Secret must be at least 8 characters').optional(),
+});
+
+export type RotateSecretInput = z.infer<typeof RotateSecretInputSchema>;
+
+export const EndpointResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  destinationUrl: z.string(),
+  signatureConfig: z.object({
+    provider: z.enum(SignatureProviders),
+    secretMasked: z.string().nullable(),
+    headerName: z.string().optional().nullable(),
+  }),
+  retryPolicy: RetryPolicySchema,
+  rateLimitPerMin: z.number(),
+  isActive: z.boolean(),
+  mode: z.enum(EndpointModes),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type EndpointResponse = z.infer<typeof EndpointResponseSchema>;
