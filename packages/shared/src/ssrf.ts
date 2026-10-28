@@ -76,7 +76,10 @@ export function isPrivateOrReservedIp(ip: string): boolean {
  * - Rejects localhost and .localhost domains.
  * - Resolves DNS and blocks private, loopback, link-local, and cloud metadata IPs.
  */
-export async function validateDestinationUrl(urlStr: string): Promise<boolean> {
+export async function validateDestinationUrl(
+  urlStr: string,
+  options?: { allowLocalhost?: boolean },
+): Promise<boolean> {
   try {
     const parsed = new URL(urlStr);
 
@@ -84,14 +87,22 @@ export async function validateDestinationUrl(urlStr: string): Promise<boolean> {
       return false;
     }
 
+    const allowLocal =
+      options?.allowLocalhost === true || process.env.ALLOW_LOCAL_DESTINATION === 'true';
+
     const hostname = parsed.hostname.toLowerCase();
+    const cleanHost = hostname.replace(/^\[|\]$/g, '');
+
+    if (allowLocal && (hostname === 'localhost' || cleanHost === '127.0.0.1')) {
+      return true;
+    }
+
     if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost')) {
       return false;
     }
 
     // Direct IP check (e.g. http://127.0.0.1:8000 or http://[::1]/)
     // Strip brackets from IPv6 hostnames like [::1]
-    const cleanHost = hostname.replace(/^\[|\]$/g, '');
     if (net.isIP(cleanHost)) {
       return !isPrivateOrReservedIp(cleanHost);
     }

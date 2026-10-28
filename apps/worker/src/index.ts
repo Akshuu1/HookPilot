@@ -1,14 +1,17 @@
 import { createDeliveryWorker } from './worker.js';
+import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { logger } from './config/logger.js';
 
 async function bootstrap(): Promise<void> {
   try {
+    await connectDatabase();
     const { close } = createDeliveryWorker();
 
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Shutdown signal received in worker, closing gracefully...');
       try {
         await close();
+        await disconnectDatabase();
         logger.info('Worker exited gracefully');
         process.exit(0);
       } catch (err) {

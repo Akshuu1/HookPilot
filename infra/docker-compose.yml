@@ -68,8 +68,12 @@ services:
       NODE_ENV: production
       LOG_LEVEL: info
       REDIS_URL: redis://redis:6379
+      MONGODB_URI: mongodb://mongo:27017/hookpilot
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       CONCURRENCY: 10
     depends_on:
+      mongo:
+        condition: service_healthy
       redis:
         condition: service_healthy
 

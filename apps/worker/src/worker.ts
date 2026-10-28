@@ -2,6 +2,8 @@ import { Worker, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { deliveryProcessor, type DeliveryJobData } from './processors/delivery.processor.js';
+import { closeRedisConnections } from './config/redis.js';
 
 export interface WorkerInstance {
   worker: Worker;
@@ -22,11 +24,11 @@ export function createDeliveryWorker(queueName = 'delivery'): WorkerInstance {
     logger.error({ err }, 'Redis connection error in worker');
   });
 
-  const worker = new Worker(
+  const worker = new Worker<DeliveryJobData>(
     queueName,
-    async (job: Job) => {
-      logger.info({ jobId: job.id, name: job.name }, 'Processing delivery job');
-      return { status: 'processed' };
+    async (job: Job<DeliveryJobData>) => {
+      logger.info({ jobId: job.id, name: job.name, data: job.data }, 'Processing delivery job');
+      return deliveryProcessor(job);
     },
     {
       connection,
@@ -35,7 +37,7 @@ export function createDeliveryWorker(queueName = 'delivery'): WorkerInstance {
   );
 
   worker.on('ready', () => {
-    logger.info('worker ready');
+    logger.info(`worker ready with concurrency ${env.CONCURRENCY}`);
   });
 
   worker.on('error', (err) => {
@@ -50,6 +52,7 @@ export function createDeliveryWorker(queueName = 'delivery'): WorkerInstance {
     logger.info('Closing delivery worker...');
     await worker.close();
     await connection.quit();
+    await closeRedisConnections();
     logger.info('Delivery worker closed successfully');
   };
 

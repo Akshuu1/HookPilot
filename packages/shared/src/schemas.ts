@@ -217,3 +217,36 @@ export const EventResponseSchema = z.object({
 });
 
 export type EventResponse = z.infer<typeof EventResponseSchema>;
+
+// ==========================================
+// Phase 5: Delivery & Worker Module
+// ==========================================
+
+export const DeliveryAttemptResponseSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  attemptNumber: z.number(),
+  startedAt: z.string().datetime(),
+  durationMs: z.number(),
+  requestHeaders: z.record(z.string()),
+  responseStatus: z.number(),
+  responseBodySnippet: z.string(),
+  error: z.string().nullable().optional(),
+  success: z.boolean(),
+  createdAt: z.string().datetime().optional(),
+});
+
+export type DeliveryAttemptResponse = z.infer<typeof DeliveryAttemptResponseSchema>;
+
+export const EventPubSubMessageSchema = z.object({
+  type: z.enum(['event.status_changed', 'event.dead']),
+  eventId: z.string(),
+  endpointId: z.string(),
+  workspaceId: z.string(),
+  status: z.enum(EventStatuses),
+  attemptCount: z.number(),
+  timestamp: z.string().datetime(),
+  error: z.string().nullable().optional(),
+});
+
+export type EventPubSubMessage = z.infer<typeof EventPubSubMessageSchema>;
