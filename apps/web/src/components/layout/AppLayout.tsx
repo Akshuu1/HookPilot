@@ -24,20 +24,22 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-transparent text-zinc-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="h-screen w-screen overflow-hidden bg-[#08080a] text-zinc-100 flex flex-col pt-16 font-sans selection:bg-[#ccff00]/20 selection:text-[#ccff00]">
       <Navbar />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-8 pb-24 md:pb-8">
-          <div className="max-w-7xl mx-auto w-full">
-            <Outlet />
+        <main className="flex-1 my-3 mr-3.5 ml-1 rounded-[2rem] border border-white/[0.08] bg-[#0b0b0e] bg-dot-grid shadow-[0_8px_32px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col ring-1 ring-white/[0.04]">
+          <div className="flex-1 overflow-y-auto px-6 lg:px-10 py-7 pb-24 md:pb-8">
+            <div className="max-w-7xl mx-auto w-full">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-zinc-950/80 border-t border-white/[0.08] backdrop-blur-xl flex items-center justify-around px-2 z-40">
+      {/* Mobile Bottom Navigation Bar (Floating Pill) */}
+      <nav className="md:hidden fixed bottom-3 inset-x-4 h-14 bg-zinc-950/90 border border-white/[0.1] rounded-full backdrop-blur-xl flex items-center justify-around px-4 z-40 shadow-2xl">
         {mobileLinks.map((link) => {
           const Icon = link.icon;
           return (
@@ -46,13 +48,14 @@ export function AppLayout() {
               to={link.to}
               className={({ isActive }) =>
                 clsx(
-                  'flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-[11px] font-medium transition-all',
-                  isActive ? 'text-indigo-400 font-semibold' : 'text-zinc-400 hover:text-zinc-100',
+                  'flex items-center justify-center h-10 w-10 rounded-full transition-all',
+                  isActive
+                    ? 'bg-[#ccff00] text-black shadow-[0_0_12px_rgba(204,255,0,0.4)]'
+                    : 'text-zinc-400 hover:text-white',
                 )
               }
             >
               <Icon className="h-4 w-4" />
-              <span>{link.label}</span>
             </NavLink>
           );
         })}

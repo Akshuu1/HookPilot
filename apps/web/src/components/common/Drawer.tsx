@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface DrawerProps {
@@ -20,6 +21,12 @@ export function Drawer({
   footer,
   width = 'xl',
 }: DrawerProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -30,7 +37,7 @@ export function Drawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const widthClasses = {
     md: 'max-w-md',
@@ -39,11 +46,11 @@ export function Drawer({
     '2xl': 'max-w-2xl',
   };
 
-  return (
+  const drawerContent = (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-zinc-950/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
@@ -81,4 +88,6 @@ export function Drawer({
       </div>
     </div>
   );
+
+  return createPortal(drawerContent, document.body);
 }

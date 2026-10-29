@@ -15,10 +15,10 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
       dot: 'bg-emerald-400',
     },
     delivering: {
-      bg: 'bg-indigo-500/10',
-      text: 'text-indigo-400',
-      border: 'border-indigo-500/20',
-      dot: 'bg-indigo-400 animate-ping',
+      bg: 'bg-cyan-500/10',
+      text: 'text-cyan-400',
+      border: 'border-cyan-500/20',
+      dot: 'bg-cyan-400 animate-ping',
     },
     pending: {
       bg: 'bg-amber-500/10',
@@ -41,10 +41,10 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   };
 
   const current = styles[status] || {
-    bg: 'bg-slate-800',
-    text: 'text-slate-300',
-    border: 'border-slate-700',
-    dot: 'bg-slate-400',
+    bg: 'bg-zinc-800/80',
+    text: 'text-zinc-300',
+    border: 'border-white/[0.08]',
+    dot: 'bg-zinc-400',
   };
 
   return (

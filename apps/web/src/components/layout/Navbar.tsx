@@ -1,4 +1,4 @@
-import { Radio, LogOut, Sun, Moon, User } from 'lucide-react';
+import { LogOut, Sun, Moon, User } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store.js';
 import { useThemeStore } from '../../store/theme.store.js';
 import { authApi } from '../../api/auth.api.js';
@@ -18,23 +18,23 @@ export function Navbar() {
   };
 
   return (
-    <header className="h-16 border-b border-white/[0.08] bg-zinc-950/70 backdrop-blur-xl px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 ring-1 ring-white/20">
-            <Radio className="h-4 w-4 text-white" />
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#08080a]/95 backdrop-blur-2xl shadow-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between select-none">
+      <div className="flex items-center gap-4 sm:gap-5">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-zinc-900 border border-white/15 text-[#ccff00] flex items-center justify-center font-mono font-bold text-xs shadow-[0_0_12px_rgba(204,255,0,0.2)] ring-1 ring-white/[0.05]">
+            H
           </div>
           <div>
-            <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-sans">
+            <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 font-sans">
               HookPilot
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                PRO
+              <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#ccff00]/10 text-[#ccff00] border border-[#ccff00]/25 font-mono">
+                LIVE
               </span>
             </span>
           </div>
         </div>
 
-        <div className="h-5 w-px bg-white/[0.08] hidden sm:block" />
+        <div className="h-4 w-px bg-white/[0.08] hidden sm:block" />
 
         <WorkspaceSwitcher />
       </div>

@@ -106,7 +106,7 @@ export function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight flex items-center gap-2.5 font-sans">
-            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <TrendingUp className="w-5 h-5" />
             </div>
             <span>Analytics & Observability</span>
@@ -121,7 +121,7 @@ export function AnalyticsPage() {
           <select
             value={selectedEndpointId}
             onChange={(e) => setSelectedEndpointId(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="px-3.5 py-2 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
           >
             <option value="">All Endpoints</option>
             {endpointsData?.map((ep: EndpointResponse) => (
@@ -140,7 +140,7 @@ export function AnalyticsPage() {
                 onClick={() => setRange(r)}
                 className={`px-3 py-1 font-semibold rounded-lg transition-all font-mono text-[11px] ${
                   range === r
-                    ? 'bg-indigo-600 text-white shadow-glow'
+                    ? 'bg-white text-zinc-950 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
@@ -156,7 +156,7 @@ export function AnalyticsPage() {
             className="p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-900/60 border border-white/[0.08] rounded-xl hover:bg-white/[0.05] transition-all"
             title="Refresh metrics"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-indigo-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
         </div>
       </div>
@@ -175,7 +175,7 @@ export function AnalyticsPage() {
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 font-mono">
                   Total Ingested
                 </span>
-                <Activity className="w-4 h-4 text-indigo-400" />
+                <Activity className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-3xl font-extrabold font-mono text-zinc-100">
                 {analytics?.summary.total.toLocaleString() ?? 0}
@@ -240,7 +240,7 @@ export function AnalyticsPage() {
             <div className="lg:col-span-2 bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2 font-sans tracking-tight">
-                  <Activity className="w-4 h-4 text-indigo-400" />
+                  <Activity className="w-4 h-4 text-emerald-400" />
                   Webhook Volume & Delivery Stream
                 </h2>
                 <span className="text-xs text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
@@ -257,8 +257,8 @@ export function AnalyticsPage() {
                     >
                       <defs>
                         <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorDelivered" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
@@ -294,7 +294,7 @@ export function AnalyticsPage() {
                         type="monotone"
                         dataKey="total"
                         name="Ingested"
-                        stroke="#818cf8"
+                        stroke="#ffffff"
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#colorTotal)"
@@ -303,7 +303,7 @@ export function AnalyticsPage() {
                         type="monotone"
                         dataKey="delivered"
                         name="Delivered"
-                        stroke="#34d399"
+                        stroke="#10b981"
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#colorDelivered)"

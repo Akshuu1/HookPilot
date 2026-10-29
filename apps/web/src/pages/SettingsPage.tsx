@@ -133,7 +133,7 @@ export function SettingsPage() {
       {/* Workspace General Config */}
       <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
         <div className="flex items-center gap-2.5 mb-5 text-sm font-bold text-zinc-100 font-sans tracking-tight">
-          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Building className="h-4 w-4" />
           </div>
           <span>General Configuration</span>
@@ -158,7 +158,7 @@ export function SettingsPage() {
               disabled={!isOwnerOrAdmin}
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 transition-all font-sans"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 disabled:opacity-50 transition-all font-sans"
             />
           </div>
 
@@ -173,7 +173,7 @@ export function SettingsPage() {
               disabled={!isOwnerOrAdmin}
               value={retentionDays}
               onChange={(e) => setRetentionDays(parseInt(e.target.value, 10) || 30)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 transition-all font-mono"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 disabled:opacity-50 transition-all font-mono"
             />
             <p className="text-[11px] text-zinc-500 mt-1.5 font-sans leading-relaxed">
               Events are automatically pruned via MongoDB TTL index when expiresAt passes.
@@ -185,7 +185,7 @@ export function SettingsPage() {
               <button
                 type="submit"
                 disabled={updateWorkspaceMutation.isPending || !workspaceName.trim()}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs shadow-glow transition-all active:scale-[0.98] disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {updateWorkspaceMutation.isPending ? 'Saving...' : 'Save Settings'}
               </button>
@@ -206,7 +206,7 @@ export function SettingsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2.5 text-sm font-bold text-zinc-100 font-sans tracking-tight">
-              <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Users className="h-4 w-4" />
               </div>
               <span>Team Members & Roles</span>
@@ -223,7 +223,7 @@ export function SettingsPage() {
                 setInviteError(null);
                 setIsInviteOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs transition-all shadow-glow shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] shrink-0"
             >
               <UserPlus className="h-3.5 w-3.5" />
               <span>Add Member</span>
@@ -236,9 +236,9 @@ export function SettingsPage() {
         ) : membersError ? (
           <ErrorAlert message="Failed to load members." onRetry={() => refetchMembers()} />
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+          <div className="rounded-xl border border-white/[0.08] bg-zinc-950 overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-800 bg-slate-900/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <thead className="border-b border-white/[0.08] bg-zinc-900/80 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="px-4 py-3">Member</th>
                   <th className="px-4 py-3">Role</th>
@@ -246,23 +246,21 @@ export function SettingsPage() {
                   {isOwnerOrAdmin && <th className="px-4 py-3 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
+              <tbody className="divide-y divide-white/[0.06]">
                 {members.map((m: WorkspaceMember) => {
                   const memberUserId = m.userId?.id || m.userId?._id;
                   const isSelf = memberUserId === user?.id;
 
                   return (
-                    <tr key={m.id} className="hover:bg-slate-900/40 transition-colors">
+                    <tr key={m.id} className="hover:bg-white/[0.03] transition-colors">
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-200">
+                        <div className="font-semibold text-zinc-200">
                           {m.userId?.name || 'User'}{' '}
                           {isSelf && (
-                            <span className="text-[10px] text-indigo-400 font-normal">(you)</span>
+                            <span className="text-[10px] text-emerald-400 font-normal">(you)</span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          {m.userId?.email}
-                        </div>
+                        <div className="text-[11px] text-zinc-400 font-mono">{m.userId?.email}</div>
                       </td>
 
                       <td className="px-4 py-3">
@@ -275,7 +273,7 @@ export function SettingsPage() {
                                 role: e.target.value as WorkspaceRole,
                               })
                             }
-                            className="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-200 text-xs focus:outline-none"
+                            className="px-2 py-1 rounded-lg border border-white/[0.08] bg-zinc-900 text-zinc-200 text-xs focus:outline-none"
                           >
                             <option value="admin">Admin</option>
                             <option value="member">Member</option>
@@ -287,8 +285,8 @@ export function SettingsPage() {
                               m.role === 'owner'
                                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                 : m.role === 'admin'
-                                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : 'bg-zinc-800 text-zinc-300 border-white/[0.08]'
                             }`}
                           >
                             {m.role}
@@ -296,7 +294,7 @@ export function SettingsPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">
+                      <td className="px-4 py-3 text-zinc-400 font-mono text-[11px]">
                         {new Date(m.createdAt).toLocaleDateString()}
                       </td>
 
@@ -309,7 +307,7 @@ export function SettingsPage() {
                                   removeMemberMutation.mutate(memberUserId!);
                                 }
                               }}
-                              className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                               title="Remove member"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -327,29 +325,29 @@ export function SettingsPage() {
       </section>
 
       {/* Security & Cryptography Information */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
+      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
         <div className="flex items-center gap-2.5 mb-3 text-sm font-bold text-white">
-          <Shield className="h-4 w-4 text-indigo-400" />
+          <Shield className="h-4 w-4 text-emerald-400" />
           <span>Security & Encryption Vault</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950">
-            <div className="font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+          <div className="p-3.5 rounded-xl border border-white/[0.08] bg-zinc-950">
+            <div className="font-semibold text-zinc-200 mb-1 flex items-center gap-1.5">
               <Lock className="h-3.5 w-3.5 text-emerald-400" />
               <span>AES-256-GCM Vault</span>
             </div>
-            <p className="text-slate-400 leading-relaxed text-[11px]">
+            <p className="text-zinc-400 leading-relaxed text-[11px]">
               All webhook secrets (Stripe, GitHub, Generic) are encrypted with an authenticated
               256-bit AES cipher before storage. Raw secrets are never returned in API payloads.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950">
-            <div className="font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
-              <Key className="h-3.5 w-3.5 text-indigo-400" />
+          <div className="p-3.5 rounded-xl border border-white/[0.08] bg-zinc-950">
+            <div className="font-semibold text-zinc-200 mb-1 flex items-center gap-1.5">
+              <Key className="h-3.5 w-3.5 text-emerald-400" />
               <span>SSRF & DNS Guard</span>
             </div>
-            <p className="text-slate-400 leading-relaxed text-[11px]">
+            <p className="text-zinc-400 leading-relaxed text-[11px]">
               Destination delivery URLs resolve via isolated DNS checks to block loopback
               (127.0.0.1, ::1), private subnets (10.0.0.0/8, 192.168.0.0/16), and cloud metadata
               services.
@@ -377,7 +375,7 @@ export function SettingsPage() {
           {inviteError && <ErrorAlert message={inviteError} />}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
               User Email Address
             </label>
             <input
@@ -386,16 +384,16 @@ export function SettingsPage() {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="colleague@company.com"
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Role Level</label>
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Role Level</label>
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as WorkspaceRole)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
             >
               <option value="admin">Admin (Full workspace and member management)</option>
               <option value="member">Member (Create endpoints, trigger replays)</option>
@@ -403,18 +401,18 @@ export function SettingsPage() {
             </select>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08]">
             <button
               type="button"
               onClick={() => setIsInviteOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={addMemberMutation.isPending || !inviteEmail.trim()}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {addMemberMutation.isPending ? 'Adding...' : 'Add Member'}
             </button>

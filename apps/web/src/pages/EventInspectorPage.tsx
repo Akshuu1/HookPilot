@@ -315,7 +315,7 @@ export function EventInspectorPage() {
             disabled={isViewer || allEvents.length === 0}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition-all disabled:opacity-40"
           >
-            <RotateCcw className="h-3.5 w-3.5 text-indigo-400" />
+            <RotateCcw className="h-3.5 w-3.5 text-emerald-400" />
             <span>Bulk Replay</span>
           </button>
 
@@ -336,7 +336,7 @@ export function EventInspectorPage() {
           <select
             value={selectedEndpointId}
             onChange={(e) => setSelectedEndpointId(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
           >
             {endpoints.length === 0 ? (
               <option value="">No endpoints available</option>
@@ -358,7 +358,7 @@ export function EventInspectorPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search payload text, order IDs, headers (q)..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-500 text-xs focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all font-mono"
           />
         </div>
 
@@ -370,7 +370,7 @@ export function EventInspectorPage() {
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize shrink-0 transition-all border ${
                 statusFilter === st
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-glow'
+                  ? 'bg-white text-zinc-950 border-white shadow-sm font-bold'
                   : 'bg-zinc-900/60 text-zinc-400 border-white/[0.08] hover:text-zinc-100 hover:border-white/[0.14]'
               }`}
             >
@@ -384,7 +384,7 @@ export function EventInspectorPage() {
           <select
             value={signatureFilter}
             onChange={(e) => setSignatureFilter(e.target.value as 'all' | 'valid' | 'invalid')}
-            className="px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-300 text-xs font-medium focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
           >
             <option value="all">All Signatures</option>
             <option value="valid">Verified Only</option>
@@ -461,7 +461,7 @@ export function EventInspectorPage() {
                     }}
                     className={`grid grid-cols-12 gap-4 px-6 items-center text-xs cursor-pointer transition-all duration-150 ${
                       isSelected
-                        ? 'bg-indigo-500/[0.08] border-l-2 border-indigo-500'
+                        ? 'bg-white/[0.06] border-l-2 border-emerald-400'
                         : 'hover:bg-white/[0.03]'
                     }`}
                   >
@@ -500,7 +500,7 @@ export function EventInspectorPage() {
                         {event.attemptCount} att
                       </span>
                       {event.replayCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-[10px] font-semibold">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
                           +{event.replayCount}r
                         </span>
                       )}
@@ -543,7 +543,7 @@ export function EventInspectorPage() {
             <>
               <button
                 onClick={() => copyAsCurl(drawerEvent)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-300 hover:text-white text-xs font-semibold transition-colors"
               >
                 {copiedCurl ? (
                   <>
@@ -552,7 +552,7 @@ export function EventInspectorPage() {
                   </>
                 ) : (
                   <>
-                    <Terminal className="h-3.5 w-3.5 text-indigo-400" />
+                    <Terminal className="h-3.5 w-3.5 text-emerald-400" />
                     <span>Copy as cURL</span>
                   </>
                 )}
@@ -561,7 +561,7 @@ export function EventInspectorPage() {
               <button
                 onClick={() => replayMutation.mutate(drawerEvent.id)}
                 disabled={isViewer || replayMutation.isPending}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-40"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>{replayMutation.isPending ? 'Replaying...' : 'Replay Webhook'}</span>
@@ -578,8 +578,8 @@ export function EventInspectorPage() {
           <div className="space-y-6 text-sm">
             {/* Overview Grid */}
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block mb-1">Signature Status</span>
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Signature Status</span>
                 {drawerEvent.signatureValid ? (
                   <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
                     <ShieldCheck className="h-3.5 w-3.5" />
@@ -593,21 +593,21 @@ export function EventInspectorPage() {
                 )}
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block mb-1">Idempotency Key</span>
-                <span className="font-mono text-slate-200 truncate block">
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Idempotency Key</span>
+                <span className="font-mono text-zinc-200 truncate block">
                   {drawerEvent.idempotencyKey || 'Auto-generated hash'}
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block mb-1">Source IP</span>
-                <span className="font-mono text-slate-200">{drawerEvent.sourceIp}</span>
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Source IP</span>
+                <span className="font-mono text-zinc-200">{drawerEvent.sourceIp}</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block mb-1">Replay Count</span>
-                <span className="font-mono text-slate-200 font-semibold">
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Replay Count</span>
+                <span className="font-mono text-zinc-200 font-semibold">
                   {drawerEvent.replayCount}
                 </span>
               </div>
@@ -615,8 +615,8 @@ export function EventInspectorPage() {
 
             {/* Inbound Headers */}
             <div>
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5 text-indigo-400" />
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Inbound HTTP Headers</span>
               </h4>
               <CodeBlock
@@ -628,8 +628,8 @@ export function EventInspectorPage() {
 
             {/* Raw Payload Body */}
             <div>
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Terminal className="h-3.5 w-3.5 text-indigo-400" />
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Terminal className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Payload Body ({drawerEvent.bodySize} bytes)</span>
               </h4>
               <CodeBlock
@@ -647,13 +647,13 @@ export function EventInspectorPage() {
 
             {/* Delivery Attempts Timeline */}
             <div>
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Activity className="h-3.5 w-3.5 text-indigo-400" />
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Delivery Attempts Timeline ({drawerEvent.attempts?.length || 0})</span>
               </h4>
 
               {!drawerEvent.attempts || drawerEvent.attempts.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center text-xs text-slate-500">
+                <div className="p-4 rounded-xl border border-dashed border-white/[0.08] text-center text-xs text-zinc-500">
                   No delivery attempts recorded yet. Status: {drawerEvent.status}.
                 </div>
               ) : (
@@ -661,11 +661,11 @@ export function EventInspectorPage() {
                   {drawerEvent.attempts.map((att: DeliveryAttemptResponse) => (
                     <div
                       key={att.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2.5"
+                      className="rounded-xl border border-white/[0.08] bg-zinc-950/80 p-4 space-y-2.5"
                     >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-200">
+                          <span className="font-bold text-zinc-200">
                             Attempt #{att.attemptNumber}
                           </span>
                           <span
@@ -678,7 +678,7 @@ export function EventInspectorPage() {
                             HTTP {att.responseStatus}
                           </span>
                         </div>
-                        <span className="text-slate-400 font-mono text-[11px]">
+                        <span className="text-zinc-400 font-mono text-[11px]">
                           {att.durationMs}ms
                         </span>
                       </div>
@@ -691,16 +691,16 @@ export function EventInspectorPage() {
 
                       {att.responseBodySnippet && (
                         <div>
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">
+                          <span className="text-[10px] font-semibold text-zinc-500 uppercase block mb-1">
                             Response Snippet
                           </span>
-                          <pre className="text-[11px] font-mono text-slate-400 bg-slate-900 p-2.5 rounded-lg overflow-x-auto whitespace-pre-wrap max-h-24">
+                          <pre className="text-[11px] font-mono text-zinc-400 bg-zinc-900/60 p-2.5 rounded-lg overflow-x-auto whitespace-pre-wrap max-h-24">
                             {att.responseBodySnippet}
                           </pre>
                         </div>
                       )}
 
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[10px] text-zinc-500">
                         Started at {new Date(att.startedAt).toLocaleString()}
                       </div>
                     </div>
@@ -735,7 +735,7 @@ export function EventInspectorPage() {
               </p>
             </div>
           ) : (
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-zinc-300 leading-relaxed">
               This will reset up to 500 failed or dead webhooks in workspace{' '}
               <strong className="text-white">"{currentWorkspace?.name}"</strong> back to{' '}
               <span className="text-amber-400 font-semibold">'pending'</span> and dispatch new
@@ -743,13 +743,13 @@ export function EventInspectorPage() {
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08]">
             <button
               onClick={() => {
                 setIsBulkReplayOpen(false);
                 setBulkReplayResult(null);
               }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
             >
               {bulkReplayResult ? 'Done' : 'Cancel'}
             </button>
@@ -757,7 +757,7 @@ export function EventInspectorPage() {
               <button
                 onClick={() => bulkReplayMutation.mutate()}
                 disabled={bulkReplayMutation.isPending}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {bulkReplayMutation.isPending ? 'Enqueuing...' : 'Confirm Bulk Replay'}
               </button>

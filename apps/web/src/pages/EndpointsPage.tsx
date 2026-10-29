@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { AxiosError } from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -203,7 +204,7 @@ export function EndpointsPage() {
         <button
           onClick={openCreateModal}
           disabled={isViewer}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs shadow-glow transition-all active:scale-[0.98] disabled:opacity-40"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs shadow-sm transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
           <span>New Endpoint</span>
@@ -219,12 +220,12 @@ export function EndpointsPage() {
         <EmptyState
           title="No webhook endpoints created yet"
           description="Create your first endpoint to get a dedicated public URL for receiving and forwarding webhook traffic."
-          icon={<Radio className="h-10 w-10 text-indigo-400" />}
+          icon={<Radio className="h-10 w-10 text-emerald-400" />}
           action={
             <button
               onClick={openCreateModal}
               disabled={isViewer}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-glow"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs shadow-sm transition-all hover:scale-[1.01] active:scale-[0.98]"
             >
               <Plus className="h-4 w-4" />
               <span>Create Endpoint</span>
@@ -279,7 +280,7 @@ export function EndpointsPage() {
                       <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-0.5">
                         Inbound Ingest URL
                       </div>
-                      <div className="text-xs font-mono text-indigo-400 truncate">{ingestUrl}</div>
+                      <div className="text-xs font-mono text-emerald-400 truncate">{ingestUrl}</div>
                     </div>
 
                     <button
@@ -308,7 +309,7 @@ export function EndpointsPage() {
                         Signature
                       </div>
                       <div className="text-zinc-200 font-semibold capitalize flex items-center gap-1.5 mt-1">
-                        <Shield className="h-3.5 w-3.5 text-indigo-400" />
+                        <Shield className="h-3.5 w-3.5 text-emerald-400" />
                         <span>{ep.signatureConfig.provider}</span>
                         {ep.signatureConfig.secretMasked && (
                           <span className="text-[10px] text-zinc-500 font-mono">
@@ -328,9 +329,11 @@ export function EndpointsPage() {
                       </div>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-800/80 col-span-2 sm:col-span-1">
-                      <div className="text-[10px] text-slate-400 font-medium">Rate Limit</div>
-                      <div className="text-slate-200 font-semibold mt-0.5">
+                    <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] col-span-2 sm:col-span-1">
+                      <div className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">
+                        Rate Limit
+                      </div>
+                      <div className="text-zinc-200 font-semibold mt-1">
                         {ep.rateLimitPerMin} req/min
                       </div>
                     </div>
@@ -338,13 +341,13 @@ export function EndpointsPage() {
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="flex items-center justify-between gap-2 mt-6 pt-4 border-t border-slate-800/80">
+                <div className="flex items-center justify-between gap-2 mt-6 pt-4 border-t border-white/[0.08]">
                   <button
                     onClick={() => copyToClipboard(curlSample, 'curl', ep.slug)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-300 hover:text-white text-xs font-medium transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.16] bg-zinc-950 text-zinc-300 hover:text-white text-xs font-medium transition-colors font-mono"
                     title="Copy cURL command to send a test webhook"
                   >
-                    <Terminal className="h-3.5 w-3.5 text-indigo-400" />
+                    <Terminal className="h-3.5 w-3.5 text-emerald-400" />
                     <span>{copiedCurlSlug === ep.slug ? 'Copied cURL!' : 'Copy cURL Test'}</span>
                   </button>
 
@@ -355,7 +358,7 @@ export function EndpointsPage() {
                         setRotatingEndpoint(ep);
                       }}
                       disabled={isViewer}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors disabled:opacity-30"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-zinc-800/60 transition-colors disabled:opacity-30"
                       title="Rotate Webhook Secret"
                     >
                       <KeyRound className="h-4 w-4" />
@@ -364,7 +367,7 @@ export function EndpointsPage() {
                     <button
                       onClick={() => openEditModal(ep)}
                       disabled={isViewer}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-30"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors disabled:opacity-30"
                       title="Edit Endpoint"
                     >
                       <Edit className="h-4 w-4" />
@@ -377,7 +380,7 @@ export function EndpointsPage() {
                         }
                       }}
                       disabled={isViewer}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-30"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-30"
                       title="Delete Endpoint"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -399,8 +402,20 @@ export function EndpointsPage() {
         maxWidth="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {(createMutation.error || updateMutation.error) && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+              {(createMutation.error as AxiosError<{ error?: { message?: string } }>)?.response
+                ?.data?.error?.message ||
+                (updateMutation.error as AxiosError<{ error?: { message?: string } }>)?.response
+                  ?.data?.error?.message ||
+                (createMutation.error as Error)?.message ||
+                (updateMutation.error as Error)?.message ||
+                'An error occurred while saving the endpoint.'}
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
               Endpoint Name
             </label>
             <input
@@ -409,12 +424,12 @@ export function EndpointsPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Stripe Webhook Ingest"
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
               Destination URL (SSRF Protected)
             </label>
             <input
@@ -423,20 +438,20 @@ export function EndpointsPage() {
               value={destinationUrl}
               onChange={(e) => setDestinationUrl(e.target.value)}
               placeholder="https://api.yourdomain.com/webhooks"
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors font-mono text-xs"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-zinc-500 mt-1">
               Private, loopback and cloud-metadata addresses are strictly rejected.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mode</label>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Mode</label>
               <select
                 value={mode}
                 onChange={(e) => setMode(e.target.value as EndpointMode)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
               >
                 <option value="forward">Forward (Deliver to destination)</option>
                 <option value="capture-only">Capture-Only (Store without delivery)</option>
@@ -444,7 +459,7 @@ export function EndpointsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
                 Rate Limit (req / min)
               </label>
               <input
@@ -453,23 +468,23 @@ export function EndpointsPage() {
                 max={10000}
                 value={rateLimitPerMin}
                 onChange={(e) => setRateLimitPerMin(parseInt(e.target.value, 10) || 60)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
               />
             </div>
           </div>
 
           {/* Signature Config */}
-          <div className="pt-2 border-t border-slate-800/80">
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-2">
+          <div className="pt-2 border-t border-white/[0.08]">
+            <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider mb-2">
               Signature Verification
             </h4>
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Provider</label>
+                <label className="block text-xs font-semibold text-zinc-400 mb-1">Provider</label>
                 <select
                   value={provider}
                   onChange={(e) => setProvider(e.target.value as SignatureProvider)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-colors"
                 >
                   <option value="none">None</option>
                   <option value="stripe">Stripe</option>
@@ -480,7 +495,7 @@ export function EndpointsPage() {
 
               {provider !== 'none' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1">
                     Secret Key
                   </label>
                   <input
@@ -488,7 +503,7 @@ export function EndpointsPage() {
                     value={secret}
                     onChange={(e) => setSecret(e.target.value)}
                     placeholder={editingEndpoint ? 'Leave empty to keep existing' : 'whsec_...'}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 font-mono transition-colors"
                   />
                 </div>
               )}
@@ -496,7 +511,7 @@ export function EndpointsPage() {
 
             {provider === 'generic' && (
               <div className="mb-3">
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                <label className="block text-xs font-semibold text-zinc-400 mb-1">
                   Custom Header Name
                 </label>
                 <input
@@ -504,18 +519,18 @@ export function EndpointsPage() {
                   value={headerName}
                   onChange={(e) => setHeaderName(e.target.value)}
                   placeholder="X-Webhook-Signature"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 font-mono text-xs transition-colors"
                 />
               </div>
             )}
 
             {provider !== 'none' && (
-              <label className="flex items-center gap-2 text-xs text-slate-300">
+              <label className="flex items-center gap-2 text-xs text-zinc-300">
                 <input
                   type="checkbox"
                   checked={enforceSignature}
                   onChange={(e) => setEnforceSignature(e.target.checked)}
-                  className="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-0"
+                  className="rounded border-white/[0.1] bg-zinc-950 text-emerald-500 focus:ring-0"
                 />
                 <span>Reject unverified webhooks with 401 Unauthorized</span>
               </label>
@@ -523,13 +538,13 @@ export function EndpointsPage() {
           </div>
 
           {/* Retry Policy */}
-          <div className="pt-2 border-t border-slate-800/80">
-            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-2">
+          <div className="pt-2 border-t border-white/[0.08]">
+            <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider mb-2">
               Exponential Backoff & Jitter
             </h4>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
                   Max Attempts
                 </label>
                 <input
@@ -538,11 +553,11 @@ export function EndpointsPage() {
                   max={20}
                   value={maxAttempts}
                   onChange={(e) => setMaxAttempts(parseInt(e.target.value, 10) || 8)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-100 text-xs focus:outline-none"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-950 text-zinc-100 text-xs focus:outline-none focus:border-white/30 font-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
                   Base Delay (ms)
                 </label>
                 <input
@@ -552,11 +567,11 @@ export function EndpointsPage() {
                   step={100}
                   value={baseDelayMs}
                   onChange={(e) => setBaseDelayMs(parseInt(e.target.value, 10) || 1000)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-100 text-xs focus:outline-none"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-950 text-zinc-100 text-xs focus:outline-none focus:border-white/30 font-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
                   Max Delay (ms)
                 </label>
                 <input
@@ -566,24 +581,24 @@ export function EndpointsPage() {
                   step={1000}
                   value={maxDelayMs}
                   onChange={(e) => setMaxDelayMs(parseInt(e.target.value, 10) || 3600000)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-100 text-xs focus:outline-none"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-950 text-zinc-100 text-xs focus:outline-none focus:border-white/30 font-mono"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.08]">
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending || !name.trim()}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {createMutation.isPending || updateMutation.isPending
                 ? 'Saving...'
@@ -611,7 +626,7 @@ export function EndpointsPage() {
               <div className="text-xs font-semibold text-emerald-200 mb-1">
                 New Secret Generated (Save it now!)
               </div>
-              <div className="font-mono text-xs text-white p-2.5 bg-slate-950 rounded-lg border border-emerald-500/30 break-all select-all flex items-center justify-between">
+              <div className="font-mono text-xs text-white p-2.5 bg-zinc-950 rounded-lg border border-emerald-500/30 break-all select-all flex items-center justify-between">
                 <span>{rotatedSecret.raw}</span>
                 <button
                   onClick={() => navigator.clipboard.writeText(rotatedSecret.raw)}
@@ -626,20 +641,29 @@ export function EndpointsPage() {
               </p>
             </div>
           ) : (
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-zinc-300">
               Rotating this secret will immediately invalidate the current verification key.
               Existing webhooks signed with the previous key may fail signature verification if
               enforced.
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          {rotateMutation.error && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+              {(rotateMutation.error as AxiosError<{ error?: { message?: string } }>)?.response
+                ?.data?.error?.message ||
+                (rotateMutation.error as Error)?.message ||
+                'Failed to rotate secret.'}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08]">
             <button
               onClick={() => {
                 setRotatingEndpoint(null);
                 setRotatedSecret(null);
               }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
             >
               {rotatedSecret ? 'Close' : 'Cancel'}
             </button>
