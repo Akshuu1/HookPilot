@@ -101,15 +101,17 @@ export function AnalyticsPage() {
     : [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8">
       {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-brand-400" />
-            Analytics & Observability
+          <h1 className="text-2xl font-bold text-zinc-100 tracking-tight flex items-center gap-2.5 font-sans">
+            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <span>Analytics & Observability</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
             Real-time webhook ingestion metrics, delivery success rates, and latency percentiles.
           </p>
         </div>
@@ -119,7 +121,7 @@ export function AnalyticsPage() {
           <select
             value={selectedEndpointId}
             onChange={(e) => setSelectedEndpointId(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 text-xs font-medium focus:outline-none focus:border-brand-500"
+            className="px-3.5 py-2 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="">All Endpoints</option>
             {endpointsData?.map((ep: EndpointResponse) => (
@@ -130,16 +132,16 @@ export function AnalyticsPage() {
           </select>
 
           {/* Range Selector */}
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex bg-zinc-950/80 p-1 rounded-xl border border-white/[0.08] text-xs shadow-inner">
             {(['1h', '24h', '7d'] as const).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className={`px-3 py-1 font-semibold rounded-lg transition-all ${
+                className={`px-3 py-1 font-semibold rounded-lg transition-all font-mono text-[11px] ${
                   range === r
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-indigo-600 text-white shadow-glow'
+                    : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 {r.toUpperCase()}
@@ -151,10 +153,10 @@ export function AnalyticsPage() {
           <button
             type="button"
             onClick={() => refetch()}
-            className="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-850 transition"
+            className="p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-900/60 border border-white/[0.08] rounded-xl hover:bg-white/[0.05] transition-all"
             title="Refresh metrics"
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-brand-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-indigo-400' : ''}`} />
           </button>
         </div>
       </div>
@@ -168,29 +170,31 @@ export function AnalyticsPage() {
           {/* Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Ingested */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider">
+            <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between text-zinc-400 mb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 font-mono">
                   Total Ingested
                 </span>
-                <Activity className="w-5 h-5 text-brand-400" />
+                <Activity className="w-4 h-4 text-indigo-400" />
               </div>
-              <div className="text-3xl font-extrabold text-white">
+              <div className="text-3xl font-extrabold font-mono text-zinc-100">
                 {analytics?.summary.total.toLocaleString() ?? 0}
               </div>
-              <div className="text-xs text-slate-500 mt-1">Inbound requests in past {range}</div>
+              <div className="text-xs text-zinc-500 mt-1.5">Inbound requests in past {range}</div>
             </div>
 
             {/* Delivered & Success Rate */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider">Delivered</span>
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between text-zinc-400 mb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                  Delivered
+                </span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="text-3xl font-extrabold text-emerald-400">
+              <div className="text-3xl font-extrabold font-mono text-emerald-400">
                 {analytics?.summary.delivered.toLocaleString() ?? 0}
               </div>
-              <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+              <div className="text-xs text-zinc-400 mt-1.5 flex items-center gap-1 font-mono">
                 <span className="font-semibold text-emerald-400">
                   {analytics?.summary.successRate ?? 100}%
                 </span>{' '}
@@ -199,30 +203,32 @@ export function AnalyticsPage() {
             </div>
 
             {/* Failed & Dead */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider">
+            <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between text-zinc-400 mb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 font-mono">
                   Failed / Dead
                 </span>
-                <XCircle className="w-5 h-5 text-rose-400" />
+                <XCircle className="w-4 h-4 text-rose-400" />
               </div>
-              <div className="text-3xl font-extrabold text-rose-400">
+              <div className="text-3xl font-extrabold font-mono text-rose-400">
                 {analytics?.summary.failed.toLocaleString() ?? 0}
               </div>
-              <div className="text-xs text-slate-500 mt-1">Permanent or exhausting retries</div>
+              <div className="text-xs text-zinc-500 mt-1.5">Exhausted retry policies</div>
             </div>
 
             {/* p95 Latency */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between text-slate-400 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider">p95 Latency</span>
-                <Clock className="w-5 h-5 text-amber-400" />
+            <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between text-zinc-400 mb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+                  p95 Latency
+                </span>
+                <Clock className="w-4 h-4 text-amber-400" />
               </div>
-              <div className="text-3xl font-extrabold text-white">
+              <div className="text-3xl font-extrabold font-mono text-zinc-100">
                 {analytics?.latency.p95 ?? 0}
-                <span className="text-lg text-slate-400 font-normal ml-1">ms</span>
+                <span className="text-sm text-zinc-400 font-normal ml-1">ms</span>
               </div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-zinc-500 mt-1.5 font-mono">
                 p50: {analytics?.latency.p50 ?? 0}ms · p99: {analytics?.latency.p99 ?? 0}ms
               </div>
             </div>
@@ -231,13 +237,13 @@ export function AnalyticsPage() {
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Timeseries Area Chart (Spans 2 cols) */}
-            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-brand-400" />
-                  Webhook Volume & Delivery
+            <div className="lg:col-span-2 bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2 font-sans tracking-tight">
+                  <Activity className="w-4 h-4 text-indigo-400" />
+                  Webhook Volume & Delivery Stream
                 </h2>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
                   Bucket: {range === '1h' ? '1m' : range === '7d' ? '1d' : '1h'}
                 </span>
               </div>
@@ -259,21 +265,28 @@ export function AnalyticsPage() {
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                       <XAxis
                         dataKey="timestamp"
                         tickFormatter={formatXAxis}
-                        stroke="#64748b"
+                        stroke="#71717a"
                         fontSize={11}
+                        fontFamily="JetBrains Mono"
                       />
-                      <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
+                      <YAxis
+                        stroke="#71717a"
+                        fontSize={11}
+                        fontFamily="JetBrains Mono"
+                        allowDecimals={false}
+                      />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #334155',
+                          backgroundColor: '#0c0c0e',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '12px',
-                          color: '#f8fafc',
+                          color: '#f4f4f5',
                           fontSize: '12px',
+                          fontFamily: 'JetBrains Mono',
                         }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
@@ -299,20 +312,20 @@ export function AnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-72 flex items-center justify-center text-slate-500 text-sm">
+                <div className="h-72 flex items-center justify-center text-zinc-500 text-sm">
                   No webhook events recorded in this time range.
                 </div>
               )}
             </div>
 
             {/* Latency Percentiles Bar Chart (1 col) */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-semibold text-white flex items-center gap-2">
+            <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold text-zinc-100 flex items-center gap-2 font-sans tracking-tight">
                   <Zap className="w-4 h-4 text-amber-400" />
                   Latency Percentiles
                 </h2>
-                <span className="text-xs text-slate-500">Duration (ms)</span>
+                <span className="text-xs text-zinc-400 font-mono">Duration (ms)</span>
               </div>
 
               {latencyChartData.some((d) => d.latencyMs > 0) ? (
@@ -322,16 +335,22 @@ export function AnalyticsPage() {
                       data={latencyChartData}
                       margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
-                      <YAxis stroke="#64748b" fontSize={11} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#71717a"
+                        fontSize={11}
+                        fontFamily="JetBrains Mono"
+                      />
+                      <YAxis stroke="#71717a" fontSize={11} fontFamily="JetBrains Mono" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #334155',
+                          backgroundColor: '#0c0c0e',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '12px',
-                          color: '#f8fafc',
+                          color: '#f4f4f5',
                           fontSize: '12px',
+                          fontFamily: 'JetBrains Mono',
                         }}
                         formatter={(val) => [`${val ?? 0} ms`, 'Latency']}
                       />
@@ -340,8 +359,8 @@ export function AnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-72 flex flex-col items-center justify-center text-slate-500 text-sm gap-2">
-                  <Clock className="w-8 h-8 text-slate-600" />
+                <div className="h-72 flex flex-col items-center justify-center text-zinc-500 text-sm gap-2">
+                  <Clock className="w-8 h-8 text-zinc-600" />
                   <span>No delivery attempts recorded yet</span>
                 </div>
               )}
@@ -349,29 +368,29 @@ export function AnalyticsPage() {
           </div>
 
           {/* Top Failure Reasons */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+          <div className="bg-zinc-900/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+            <h2 className="text-base font-semibold text-zinc-100 mb-5 flex items-center gap-2 font-sans tracking-tight">
               <AlertTriangle className="w-4 h-4 text-rose-400" />
               Top Delivery Failure Reasons
             </h2>
 
             {analytics?.topFailures && analytics.topFailures.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="text-xs uppercase bg-slate-950 text-slate-400 border-b border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+                <table className="w-full text-left text-sm text-zinc-300">
+                  <thead className="text-xs uppercase bg-zinc-950/80 text-zinc-400 border-b border-white/[0.08] font-mono">
                     <tr>
-                      <th className="px-4 py-3 rounded-l-lg">Failure Reason / Status</th>
-                      <th className="px-4 py-3 text-right rounded-r-lg">Count</th>
+                      <th className="px-5 py-3.5">Failure Reason / Status</th>
+                      <th className="px-5 py-3.5 text-right">Count</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/50">
+                  <tbody className="divide-y divide-white/[0.04]">
                     {analytics.topFailures.map(
                       (failure: { reason: string; count: number }, idx: number) => (
-                        <tr key={idx} className="hover:bg-slate-850/50">
-                          <td className="px-4 py-3 font-mono text-xs text-rose-300">
+                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-5 py-3.5 font-mono text-xs text-rose-300">
                             {failure.reason}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-white">
+                          <td className="px-5 py-3.5 text-right font-mono font-semibold text-zinc-100">
                             {failure.count}
                           </td>
                         </tr>
@@ -381,7 +400,7 @@ export function AnalyticsPage() {
                 </table>
               </div>
             ) : (
-              <div className="py-8 text-center text-slate-500 text-sm">
+              <div className="py-8 text-center text-zinc-500 text-sm font-sans">
                 🎉 No failure events recorded in the selected period!
               </div>
             )}

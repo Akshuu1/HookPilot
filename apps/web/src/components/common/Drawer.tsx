@@ -49,29 +49,31 @@ export function Drawer({
 
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
         <div
-          className={`w-screen ${widthClasses[width]} border-l border-slate-800 bg-slate-900 shadow-2xl flex flex-col z-10`}
+          className={`w-screen ${widthClasses[width]} border-l border-white/[0.08] bg-[#0c0c0e] shadow-2xl flex flex-col z-10`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/90 backdrop-blur">
+          <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4 bg-zinc-950/80 backdrop-blur-md">
             <div>
-              <div className="text-base font-bold text-white flex items-center gap-2">{title}</div>
-              {subtitle && <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>}
+              <div className="text-base font-bold text-zinc-100 flex items-center gap-2 font-sans tracking-tight">
+                {title}
+              </div>
+              {subtitle && <div className="text-xs text-zinc-400 mt-1 font-mono">{subtitle}</div>}
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="rounded-xl p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">{children}</div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 text-zinc-300">{children}</div>
 
           {/* Footer */}
           {footer && (
-            <div className="border-t border-slate-800 px-6 py-4 bg-slate-900/90 backdrop-blur flex items-center justify-end gap-3">
+            <div className="border-t border-white/[0.08] px-6 py-4 bg-zinc-950/80 backdrop-blur-md flex items-center justify-end gap-3">
               {footer}
             </div>
           )}

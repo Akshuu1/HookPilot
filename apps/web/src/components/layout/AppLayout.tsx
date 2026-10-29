@@ -24,18 +24,20 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="min-h-screen bg-transparent text-zinc-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
       <Navbar />
 
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-20 md:pb-8">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+          <div className="max-w-7xl mx-auto w-full">
+            <Outlet />
+          </div>
         </main>
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 h-14 bg-slate-900/90 border-t border-slate-800 backdrop-blur-lg flex items-center justify-around px-2 z-40">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-zinc-950/80 border-t border-white/[0.08] backdrop-blur-xl flex items-center justify-around px-2 z-40">
         {mobileLinks.map((link) => {
           const Icon = link.icon;
           return (
@@ -44,8 +46,8 @@ export function AppLayout() {
               to={link.to}
               className={({ isActive }) =>
                 clsx(
-                  'flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[10px] font-semibold transition-colors',
-                  isActive ? 'text-indigo-400' : 'text-slate-400 hover:text-white',
+                  'flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-[11px] font-medium transition-all',
+                  isActive ? 'text-indigo-400 font-semibold' : 'text-zinc-400 hover:text-zinc-100',
                 )
               }
             >

@@ -184,25 +184,26 @@ export function EndpointsPage() {
   const endpoints = data || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight flex items-center gap-2.5 font-sans">
             <span>Webhook Endpoints</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 border border-white/[0.08] font-mono">
               {endpoints.length}
             </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Receive webhooks at unique ingress URLs and forward them reliably to your destinations.
+          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+            Receive webhooks at unique ingress URLs and forward them reliably to your internal
+            destinations.
           </p>
         </div>
 
         <button
           onClick={openCreateModal}
           disabled={isViewer}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-40"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs shadow-glow transition-all active:scale-[0.98] disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
           <span>New Endpoint</span>
@@ -223,7 +224,7 @@ export function EndpointsPage() {
             <button
               onClick={openCreateModal}
               disabled={isViewer}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-glow"
             >
               <Plus className="h-4 w-4" />
               <span>Create Endpoint</span>
@@ -239,15 +240,17 @@ export function EndpointsPage() {
             return (
               <div
                 key={ep.id}
-                className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-slate-700 transition-all shadow-lg shadow-black/20"
+                className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 flex flex-col justify-between hover:border-white/[0.16] transition-all shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]"
               >
                 <div>
                   {/* Top line: Name & Badges */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start justify-between gap-3 mb-4">
                     <div>
-                      <h3 className="text-base font-bold text-white tracking-tight">{ep.name}</h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-400 font-mono mt-0.5">
-                        <Globe className="h-3.5 w-3.5 text-slate-500" />
+                      <h3 className="text-base font-bold text-zinc-100 tracking-tight font-sans">
+                        {ep.name}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-1">
+                        <Globe className="h-3.5 w-3.5 text-zinc-500" />
                         <span
                           className="truncate max-w-[260px] sm:max-w-md"
                           title={ep.destinationUrl}
@@ -259,7 +262,7 @@ export function EndpointsPage() {
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                        className={`text-[11px] font-mono uppercase tracking-wider font-semibold px-2.5 py-0.5 rounded-full border ${
                           ep.mode === 'forward'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
@@ -271,27 +274,27 @@ export function EndpointsPage() {
                   </div>
 
                   {/* Ingest URL with Copy button */}
-                  <div className="mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+                  <div className="mt-4 p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] flex items-center justify-between gap-2 shadow-inner">
                     <div className="min-w-0">
-                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+                      <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-0.5">
                         Inbound Ingest URL
                       </div>
-                      <div className="text-xs font-mono text-indigo-300 truncate">{ingestUrl}</div>
+                      <div className="text-xs font-mono text-indigo-400 truncate">{ingestUrl}</div>
                     </div>
 
                     <button
                       onClick={() => copyToClipboard(ingestUrl, 'url', ep.slug)}
-                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-colors border border-white/[0.06]"
                       title="Copy Ingest URL"
                     >
                       {copiedSlug === ep.slug ? (
                         <>
                           <Check className="h-3.5 w-3.5 text-emerald-400" />
-                          <span className="text-emerald-400 text-[11px]">Copied</span>
+                          <span className="text-emerald-400 text-[11px] font-medium">Copied</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="h-3.5 w-3.5" />
+                          <Copy className="h-3.5 w-3.5 text-zinc-400" />
                           <span className="text-[11px]">Copy</span>
                         </>
                       )}
@@ -300,23 +303,27 @@ export function EndpointsPage() {
 
                   {/* Metadata Chips */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-4 text-xs">
-                    <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-800/80">
-                      <div className="text-[10px] text-slate-400 font-medium">Signature</div>
-                      <div className="text-slate-200 font-semibold capitalize flex items-center gap-1 mt-0.5">
-                        <Shield className="h-3 w-3 text-indigo-400" />
+                    <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                      <div className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">
+                        Signature
+                      </div>
+                      <div className="text-zinc-200 font-semibold capitalize flex items-center gap-1.5 mt-1">
+                        <Shield className="h-3.5 w-3.5 text-indigo-400" />
                         <span>{ep.signatureConfig.provider}</span>
                         {ep.signatureConfig.secretMasked && (
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[10px] text-zinc-500 font-mono">
                             ({ep.signatureConfig.secretMasked})
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-800/80">
-                      <div className="text-[10px] text-slate-400 font-medium">Retries</div>
-                      <div className="text-slate-200 font-semibold flex items-center gap-1 mt-0.5">
-                        <Zap className="h-3 w-3 text-amber-400" />
+                    <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                      <div className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">
+                        Retries
+                      </div>
+                      <div className="text-zinc-200 font-semibold flex items-center gap-1.5 mt-1">
+                        <Zap className="h-3.5 w-3.5 text-amber-400" />
                         <span>{ep.retryPolicy.maxAttempts} max</span>
                       </div>
                     </div>

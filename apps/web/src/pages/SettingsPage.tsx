@@ -121,17 +121,21 @@ export function SettingsPage() {
   return (
     <div className="max-w-4xl space-y-8">
       {/* Page Title */}
-      <div className="border-b border-slate-800 pb-5">
-        <h2 className="text-xl font-bold text-white tracking-tight">Workspace Settings</h2>
-        <p className="text-xs text-slate-400 mt-1">
+      <div className="border-b border-white/[0.08] pb-6">
+        <h2 className="text-2xl font-bold text-zinc-100 tracking-tight font-sans">
+          Workspace Settings
+        </h2>
+        <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
           Manage workspace profile, retention TTL policy, team access, and role permissions.
         </p>
       </div>
 
       {/* Workspace General Config */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
-        <div className="flex items-center gap-2.5 mb-4 text-sm font-bold text-white">
-          <Building className="h-4 w-4 text-indigo-400" />
+      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+        <div className="flex items-center gap-2.5 mb-5 text-sm font-bold text-zinc-100 font-sans tracking-tight">
+          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <Building className="h-4 w-4" />
+          </div>
           <span>General Configuration</span>
         </div>
 
@@ -145,7 +149,7 @@ export function SettingsPage() {
           className="space-y-4 max-w-lg"
         >
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5 font-sans">
               Workspace Name
             </label>
             <input
@@ -154,12 +158,12 @@ export function SettingsPage() {
               disabled={!isOwnerOrAdmin}
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 transition-all font-sans"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5 font-sans">
               Webhook Retention Policy (Days)
             </label>
             <input
@@ -169,9 +173,9 @@ export function SettingsPage() {
               disabled={!isOwnerOrAdmin}
               value={retentionDays}
               onChange={(e) => setRetentionDays(parseInt(e.target.value, 10) || 30)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-950/60 text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 transition-all font-mono"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-zinc-500 mt-1.5 font-sans leading-relaxed">
               Events are automatically pruned via MongoDB TTL index when expiresAt passes.
             </p>
           </div>
@@ -181,13 +185,13 @@ export function SettingsPage() {
               <button
                 type="submit"
                 disabled={updateWorkspaceMutation.isPending || !workspaceName.trim()}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs shadow-glow transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {updateWorkspaceMutation.isPending ? 'Saving...' : 'Save Settings'}
               </button>
 
               {saveSuccess && (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold animate-fade-in">
+                <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold animate-fade-in font-mono">
                   <CheckCircle2 className="h-4 w-4" />
                   Saved!
                 </span>
@@ -198,14 +202,16 @@ export function SettingsPage() {
       </section>
 
       {/* Team Members & Roles */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
+      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <div className="flex items-center gap-2.5 text-sm font-bold text-white">
-              <Users className="h-4 w-4 text-indigo-400" />
+            <div className="flex items-center gap-2.5 text-sm font-bold text-zinc-100 font-sans tracking-tight">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <Users className="h-4 w-4" />
+              </div>
               <span>Team Members & Roles</span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
               Role permissions: Owner & Admin (full access), Member (create endpoints & replay),
               Viewer (read-only).
             </p>
@@ -217,7 +223,7 @@ export function SettingsPage() {
                 setInviteError(null);
                 setIsInviteOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs transition-all shadow-glow shrink-0"
             >
               <UserPlus className="h-3.5 w-3.5" />
               <span>Add Member</span>

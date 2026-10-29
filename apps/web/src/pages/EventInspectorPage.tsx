@@ -290,18 +290,18 @@ export function EventInspectorPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-zinc-100 tracking-tight flex items-center gap-2.5 font-sans">
             <span>Live Event Inspector</span>
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Live Socket
             </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
             Realtime webhook stream, virtualized inspection, payload debugging, and replay controls.
           </p>
         </div>
@@ -313,7 +313,7 @@ export function EventInspectorPage() {
               setIsBulkReplayOpen(true);
             }}
             disabled={isViewer || allEvents.length === 0}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs border border-slate-700 transition-colors disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-200 hover:text-white font-semibold text-xs border border-white/[0.08] transition-all disabled:opacity-40"
           >
             <RotateCcw className="h-3.5 w-3.5 text-indigo-400" />
             <span>Bulk Replay</span>
@@ -321,7 +321,7 @@ export function EventInspectorPage() {
 
           <button
             onClick={() => refetch()}
-            className="p-2 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl border border-white/[0.08] bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all"
             title="Refresh stream"
           >
             <RefreshCw className="h-4 w-4" />
@@ -336,7 +336,7 @@ export function EventInspectorPage() {
           <select
             value={selectedEndpointId}
             onChange={(e) => setSelectedEndpointId(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-200 text-xs font-semibold focus:outline-none focus:border-indigo-500"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             {endpoints.length === 0 ? (
               <option value="">No endpoints available</option>
@@ -352,26 +352,26 @@ export function EventInspectorPage() {
 
         {/* Search input */}
         <div className="relative flex-1">
-          <Search className="h-4 w-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="h-4 w-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search payload text, order IDs, headers (q)..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-800 bg-slate-900 text-slate-100 placeholder:text-slate-500 text-xs focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
           />
         </div>
 
         {/* Status Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 font-mono text-xs">
           {(['all', 'pending', 'delivering', 'delivered', 'failed', 'dead'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize shrink-0 transition-colors border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize shrink-0 transition-all border ${
                 statusFilter === st
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-glow'
+                  : 'bg-zinc-900/60 text-zinc-400 border-white/[0.08] hover:text-zinc-100 hover:border-white/[0.14]'
               }`}
             >
               {st}
@@ -384,7 +384,7 @@ export function EventInspectorPage() {
           <select
             value={signatureFilter}
             onChange={(e) => setSignatureFilter(e.target.value as 'all' | 'valid' | 'invalid')}
-            className="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 text-xs font-medium focus:outline-none"
+            className="px-3.5 py-2.5 rounded-xl border border-white/[0.08] bg-zinc-900/60 text-zinc-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">All Signatures</option>
             <option value="valid">Verified Only</option>
@@ -417,9 +417,9 @@ export function EventInspectorPage() {
           icon={<Activity className="h-10 w-10 text-indigo-400 animate-pulse" />}
         />
       ) : (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-2xl shadow-black/40">
+        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 backdrop-blur-sm overflow-hidden shadow-2xl ring-1 ring-white/[0.03]">
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-slate-800 bg-slate-900/90 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-white/[0.08] bg-zinc-950/80 text-[11px] font-semibold text-zinc-400 uppercase tracking-widest font-mono">
             <div className="col-span-2">Status</div>
             <div className="col-span-1">Method</div>
             <div className="col-span-4">Event ID / Idempotency</div>
@@ -428,7 +428,7 @@ export function EventInspectorPage() {
           </div>
 
           {/* Virtualized Table Scroll Container */}
-          <div ref={parentRef} className="h-[600px] overflow-y-auto divide-y divide-slate-800/60">
+          <div ref={parentRef} className="h-[600px] overflow-y-auto divide-y divide-white/[0.04]">
             <div
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
@@ -459,10 +459,10 @@ export function EventInspectorPage() {
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    className={`grid grid-cols-12 gap-4 px-6 items-center text-xs cursor-pointer transition-colors ${
+                    className={`grid grid-cols-12 gap-4 px-6 items-center text-xs cursor-pointer transition-all duration-150 ${
                       isSelected
-                        ? 'bg-indigo-600/15 border-l-4 border-indigo-500'
-                        : 'hover:bg-slate-800/50'
+                        ? 'bg-indigo-500/[0.08] border-l-2 border-indigo-500'
+                        : 'hover:bg-white/[0.03]'
                     }`}
                   >
                     {/* Status */}
@@ -471,38 +471,36 @@ export function EventInspectorPage() {
                     </div>
 
                     {/* Method */}
-                    <div className="col-span-1 font-mono font-bold text-slate-300">
+                    <div className="col-span-1 font-mono font-bold text-zinc-300">
                       {event.method}
                     </div>
 
                     {/* ID & Idempotency Key */}
                     <div className="col-span-4 truncate">
-                      <span className="font-mono text-slate-200 font-semibold mr-2">
-                        {event.id}
-                      </span>
+                      <span className="font-mono text-zinc-100 font-semibold mr-2">{event.id}</span>
                       {event.idempotencyKey && (
-                        <span className="text-[10px] font-mono text-slate-400 truncate">
+                        <span className="text-[10px] font-mono text-zinc-400 truncate">
                           ({event.idempotencyKey})
                         </span>
                       )}
                     </div>
 
                     {/* Timestamp */}
-                    <div className="col-span-3 text-slate-400 flex items-center gap-1.5 truncate">
-                      <Clock className="h-3 w-3 text-slate-500" />
+                    <div className="col-span-3 text-zinc-400 flex items-center gap-1.5 truncate font-mono text-[11px]">
+                      <Clock className="h-3 w-3 text-zinc-500" />
                       <span>{formattedDate}</span>
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-zinc-500">
                         ({new Date(event.receivedAt).toLocaleDateString()})
                       </span>
                     </div>
 
                     {/* Attempts / Replay count */}
-                    <div className="col-span-2 text-right font-mono text-slate-300 flex items-center justify-end gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[11px] text-slate-300">
+                    <div className="col-span-2 text-right font-mono text-zinc-300 flex items-center justify-end gap-2">
+                      <span className="px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.06] text-[11px] text-zinc-300">
                         {event.attemptCount} att
                       </span>
                       {event.replayCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-semibold">
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-[10px] font-semibold">
                           +{event.replayCount}r
                         </span>
                       )}
@@ -513,7 +511,7 @@ export function EventInspectorPage() {
             </div>
 
             {isFetchingNextPage && (
-              <div className="py-3 text-center text-xs text-slate-400 bg-slate-900/50">
+              <div className="py-3 text-center text-xs text-zinc-400 bg-zinc-950/50 font-mono">
                 Loading more events...
               </div>
             )}

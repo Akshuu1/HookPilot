@@ -48,19 +48,21 @@ export function Modal({
 
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl text-left z-10`}
+          className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-2xl border border-white/[0.1] bg-[#0c0c0e] p-6 shadow-2xl text-left z-10 backdrop-blur-xl ring-1 ring-white/[0.05]`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between mb-5">
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">{title}</h3>
-              {description && <p className="text-xs text-slate-400 mt-1">{description}</p>}
+              <h3 className="text-lg font-bold text-zinc-100 tracking-tight font-sans">{title}</h3>
+              {description && (
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{description}</p>
+              )}
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="rounded-xl p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
           {children}
