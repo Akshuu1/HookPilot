@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Webhook, Activity, Settings, TrendingUp } from 'lucide-react';
+import { Webhook, Activity, Settings, TrendingUp, Bell } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Sidebar() {
@@ -13,6 +13,11 @@ export function Sidebar() {
       to: '/events',
       label: 'Event Inspector',
       icon: Activity,
+    },
+    {
+      to: '/alerts',
+      label: 'Failure Alerts',
+      icon: Bell,
     },
     {
       to: '/analytics',

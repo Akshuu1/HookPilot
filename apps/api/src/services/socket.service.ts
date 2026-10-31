@@ -128,17 +128,21 @@ export function createSocketServer(
       if (channel !== 'events') return;
 
       try {
-        const rawJson = JSON.parse(message);
+        const rawJson = JSON.parse(message) as { type?: string; workspaceId?: string };
         const parsed = EventPubSubMessageSchema.safeParse(rawJson);
 
-        const data: EventPubSubMessage = parsed.success ? parsed.data : rawJson;
-        if (!data.workspaceId) return;
+        const data: EventPubSubMessage = parsed.success
+          ? parsed.data
+          : (rawJson as unknown as EventPubSubMessage);
+        const workspaceId = data.workspaceId || rawJson.workspaceId;
+        if (!workspaceId) return;
 
-        const room = `ws:${data.workspaceId}`;
+        const room = `ws:${workspaceId}`;
+        const msgType = rawJson.type || data.type;
 
-        if (data.type === 'event.created') {
+        if (msgType === 'event.created') {
           io.local.to(room).emit('event:created', data);
-        } else if (data.type === 'delivery.update' || data.type === 'delivery.status_changed') {
+        } else if (msgType === 'delivery.update' || msgType === 'delivery.status_changed') {
           const resLabel =
             data.status === 'delivered'
               ? 'success'
@@ -147,6 +151,8 @@ export function createSocketServer(
                 : 'retryable';
           deliveryAttemptsTotal.inc({ endpoint: data.endpointId || 'unknown', result: resLabel });
           io.local.to(room).emit('delivery:update', data);
+        } else if (msgType === 'alert.status_changed') {
+          io.local.to(room).emit('alert:status', rawJson);
         } else {
           // 'event.status_changed', 'event.dead', or other updates
           const resLabel =

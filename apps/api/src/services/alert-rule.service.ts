@@ -285,8 +285,43 @@ export class AlertRuleService {
     }));
   }
 
+  async getWorkspaceHistory(workspaceId: string, limit = 100): Promise<AlertHistoryResponse[]> {
+    const histories = await AlertHistoryModel.find({
+      workspaceId: new Types.ObjectId(workspaceId),
+    })
+      .sort({ firedAt: -1 })
+      .limit(limit);
+
+    return histories.map((h) => ({
+      id: h._id.toString(),
+      workspaceId: h.workspaceId.toString(),
+      ruleId: h.ruleId.toString(),
+      firedAt: h.firedAt.toISOString(),
+      resolvedAt: h.resolvedAt ? h.resolvedAt.toISOString() : null,
+      value: h.value,
+      summary: h.summary,
+      notifications: (h.notifications || []).map((n) => ({
+        channelId: n.channelId.toString(),
+        kind: n.kind,
+        status: n.status,
+        error: n.error || null,
+        sentAt: n.sentAt.toISOString(),
+      })),
+      createdAt: h.createdAt.toISOString(),
+    }));
+  }
+
   async testEvaluate(ruleId: string, workspaceId: string): Promise<TestEvaluateResult> {
     return alertEvaluatorService.testEvaluateRule(ruleId, workspaceId);
+  }
+
+  async testEvaluatePreview(
+    workspaceId: string,
+    scope: AlertRuleScope,
+    condition: AlertRuleCondition,
+  ): Promise<TestEvaluateResult> {
+    await this.validateScope(workspaceId, scope);
+    return alertEvaluatorService.testEvaluateParams(workspaceId, scope, condition);
   }
 }
 

@@ -6,12 +6,24 @@ import { useWorkspaceStore } from '../store/workspace.store.js';
 
 type RealtimeListener = (event: EventPubSubMessage) => void;
 
+export interface AlertStatusMessage {
+  type: string;
+  workspaceId: string;
+  ruleId: string;
+  status: 'ok' | 'firing';
+  value: number;
+  timestamp: string;
+}
+
+type AlertStatusListener = (data: AlertStatusMessage) => void;
+
 class RealtimeSocketManager {
   private socket: Socket | null = null;
   private currentWorkspaceId: string | null = null;
   private createdListeners: Set<RealtimeListener> = new Set();
   private updateListeners: Set<RealtimeListener> = new Set();
   private deliveryUpdateListeners: Set<RealtimeListener> = new Set();
+  private alertStatusListeners: Set<AlertStatusListener> = new Set();
 
   connect() {
     const token = useAuthStore.getState().accessToken;
@@ -60,6 +72,10 @@ class RealtimeSocketManager {
     this.socket.on('delivery:update', (data: EventPubSubMessage) => {
       this.deliveryUpdateListeners.forEach((fn) => fn(data));
     });
+
+    this.socket.on('alert:status', (data: AlertStatusMessage) => {
+      this.alertStatusListeners.forEach((fn) => fn(data));
+    });
   }
 
   joinWorkspace(workspaceId: string) {
@@ -95,6 +111,13 @@ class RealtimeSocketManager {
     this.deliveryUpdateListeners.add(listener);
     return () => {
       this.deliveryUpdateListeners.delete(listener);
+    };
+  }
+
+  onAlertStatus(listener: AlertStatusListener): () => void {
+    this.alertStatusListeners.add(listener);
+    return () => {
+      this.alertStatusListeners.delete(listener);
     };
   }
 

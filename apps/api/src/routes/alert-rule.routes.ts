@@ -21,6 +21,20 @@ alertRuleRouter.get(
   alertRuleController.list,
 );
 
+alertRuleRouter.get(
+  '/workspaces/:workspaceId/alert-history',
+  authMiddleware,
+  requireRole('viewer'),
+  alertRuleController.getWorkspaceHistory,
+);
+
+alertRuleRouter.post(
+  '/workspaces/:workspaceId/alert-rules/test-evaluate',
+  authMiddleware,
+  requireRole('viewer'),
+  alertRuleController.testEvaluatePreview,
+);
+
 // Individual rule routes
 alertRuleRouter.get(
   '/alert-rules/:id',

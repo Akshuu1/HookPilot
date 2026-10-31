@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import type {
   AlertRuleCondition,
+  AlertRuleScope,
   TestEvaluateResult,
   AlertNotificationKind,
 } from '@hookpilot/shared';
@@ -437,6 +438,26 @@ export class AlertEvaluatorService {
     }
 
     await state.save();
+
+    if (actionTaken === 'fired' || actionTaken === 'resolved') {
+      try {
+        const redis = getRedisClient();
+        await redis.publish(
+          'events',
+          JSON.stringify({
+            type: 'alert.status_changed',
+            workspaceId: rule.workspaceId.toString(),
+            ruleId: rule._id.toString(),
+            status: state.status,
+            value: evaluation.metricValue,
+            timestamp: now.toISOString(),
+          }),
+        );
+      } catch (err) {
+        logger.warn({ err }, 'Failed to publish alert status to Redis');
+      }
+    }
+
     return { isFiring: state.status === 'firing', actionTaken };
   }
 
@@ -513,6 +534,31 @@ export class AlertEvaluatorService {
     return {
       ruleId: rule.id,
       conditionType: (rule.condition as AlertRuleCondition).type,
+      currentValue: evaluation.metricValue,
+      wouldFire: evaluation.isTriggered,
+      summary: evaluation.metricText,
+      topFailureReasons: evaluation.topFailureReasons,
+    };
+  }
+
+  /**
+   * Dry-run evaluation of parameters before rule is saved
+   */
+  async testEvaluateParams(
+    workspaceId: string,
+    scope: AlertRuleScope,
+    condition: AlertRuleCondition,
+  ): Promise<TestEvaluateResult> {
+    const mockRule = {
+      workspaceId: new Types.ObjectId(workspaceId),
+      scope,
+      condition,
+    } as unknown as IAlertRule;
+
+    const evaluation = await this.evaluateCondition(mockRule);
+    return {
+      ruleId: 'preview',
+      conditionType: condition.type,
       currentValue: evaluation.metricValue,
       wouldFire: evaluation.isTriggered,
       summary: evaluation.metricText,

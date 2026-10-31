@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   useInfiniteQuery,
   useQuery,
@@ -49,10 +50,16 @@ export function EventInspectorPage() {
   const queryClient = useQueryClient();
   const { currentWorkspace } = useWorkspaceStore();
   const workspaceId = currentWorkspace?.id;
+  const [searchParams] = useSearchParams();
+
+  const urlEndpointId = searchParams.get('endpointId') || '';
+  const urlStatus = (searchParams.get('status') as EventStatus) || null;
+  const timeFrom = searchParams.get('from');
+  const timeTo = searchParams.get('to');
 
   // Selected filters
-  const [selectedEndpointId, setSelectedEndpointId] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all');
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string>(urlEndpointId);
+  const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>(urlStatus || 'all');
   const [signatureFilter, setSignatureFilter] = useState<'all' | 'valid' | 'invalid'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -88,12 +95,14 @@ export function EventInspectorPage() {
 
   const endpoints = endpointsData || [];
 
-  // Default to first endpoint if none selected
+  // Default to URL endpoint or first endpoint if none selected
   useEffect(() => {
-    if (!selectedEndpointId && endpoints.length > 0) {
+    if (urlEndpointId && endpoints.some((e) => e.id === urlEndpointId)) {
+      setSelectedEndpointId(urlEndpointId);
+    } else if (!selectedEndpointId && endpoints.length > 0) {
       setSelectedEndpointId(endpoints[0]!.id);
     }
-  }, [endpoints, selectedEndpointId]);
+  }, [endpoints, selectedEndpointId, urlEndpointId]);
 
   // Infinite query for events
   const queryKey = useMemo(
@@ -155,7 +164,7 @@ export function EventInspectorPage() {
               sourceIp: 'incoming',
               signatureValid: true,
               idempotencyKey: '',
-              status: (msg.status as any) || 'pending',
+              status: (msg.status as EventStatus) || 'pending',
               attemptCount: msg.attemptCount ?? 0,
               replayCount: 0,
               lastAttemptAt: null,
@@ -386,6 +395,20 @@ export function EventInspectorPage() {
           </button>
         </div>
       </div>
+
+      {/* Alert Window Notice Banner */}
+      {timeFrom && (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>
+              Alert Trigger Timeframe: viewing events around{' '}
+              <strong>{new Date(timeFrom).toLocaleTimeString()}</strong>{' '}
+              {timeTo ? `to ${new Date(timeTo).toLocaleTimeString()}` : '(active incident)'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Control Bar: Endpoint selector, Search, and Filters */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">

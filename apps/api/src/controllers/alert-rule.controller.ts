@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { createAlertRuleSchema, updateAlertRuleSchema } from '@hookpilot/shared';
+import {
+  createAlertRuleSchema,
+  updateAlertRuleSchema,
+  alertRuleScopeSchema,
+  alertRuleConditionSchema,
+} from '@hookpilot/shared';
 import { alertRuleService } from '../services/alert-rule.service.js';
 
 export class AlertRuleController {
@@ -74,10 +79,33 @@ export class AlertRuleController {
     }
   }
 
+  async getWorkspaceHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const workspaceId = String(req.params.workspaceId);
+      const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 100;
+      const history = await alertRuleService.getWorkspaceHistory(workspaceId, limit);
+      res.status(200).json({ history });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async testEvaluate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const rule = req.alertRule!;
       const result = await alertRuleService.testEvaluate(rule.id, rule.workspaceId.toString());
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async testEvaluatePreview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const workspaceId = String(req.params.workspaceId);
+      const scope = alertRuleScopeSchema.parse(req.body.scope);
+      const condition = alertRuleConditionSchema.parse(req.body.condition);
+      const result = await alertRuleService.testEvaluatePreview(workspaceId, scope, condition);
       res.status(200).json(result);
     } catch (err) {
       next(err);

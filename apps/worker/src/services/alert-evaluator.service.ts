@@ -436,6 +436,26 @@ export class AlertEvaluatorService {
     }
 
     await state.save();
+
+    if (actionTaken === 'fired' || actionTaken === 'resolved') {
+      try {
+        const redis = getRedisClient();
+        await redis.publish(
+          'events',
+          JSON.stringify({
+            type: 'alert.status_changed',
+            workspaceId: rule.workspaceId.toString(),
+            ruleId: rule._id.toString(),
+            status: state.status,
+            value: evaluation.metricValue,
+            timestamp: now.toISOString(),
+          }),
+        );
+      } catch (err) {
+        logger.warn({ err }, 'Failed to publish alert status to Redis');
+      }
+    }
+
     return { isFiring: state.status === 'firing', actionTaken };
   }
 
