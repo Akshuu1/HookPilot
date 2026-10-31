@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { filterRuleSchema } from './filter.js';
 
 export const HealthStatusSchema = z.object({
   status: z.enum(['ok', 'error']),
@@ -326,7 +327,7 @@ export const CreateDestinationInputSchema = z.object({
   isActive: z.boolean().default(true).optional(),
   retryPolicy: RetryPolicySchema.optional(),
   rateLimitPerMin: z.number().int().min(1).max(1000000).optional(),
-  filter: z.record(z.any()).nullable().optional(),
+  filter: filterRuleSchema.nullable().optional(),
   outboundSecret: z.string().optional(),
 });
 export type CreateDestinationInput = z.infer<typeof CreateDestinationInputSchema>;
@@ -338,10 +339,27 @@ export const UpdateDestinationInputSchema = z.object({
   isActive: z.boolean().optional(),
   retryPolicy: RetryPolicySchema.optional(),
   rateLimitPerMin: z.number().int().min(1).max(1000000).nullable().optional(),
-  filter: z.record(z.any()).nullable().optional(),
+  filter: filterRuleSchema.nullable().optional(),
   outboundSecret: z.string().optional(),
 });
 export type UpdateDestinationInput = z.infer<typeof UpdateDestinationInputSchema>;
+
+export const TestFilterInputSchema = z
+  .object({
+    eventId: z.string().optional(),
+    sample: z
+      .object({
+        body: z.any().optional(),
+        headers: z.record(z.any()).optional(),
+        method: z.string().optional(),
+        contentType: z.string().optional(),
+      })
+      .optional(),
+  })
+  .refine((data) => Boolean(data.eventId || data.sample), {
+    message: 'Either eventId or sample must be provided',
+  });
+export type TestFilterInput = z.infer<typeof TestFilterInputSchema>;
 
 export const DestinationResponseSchema = z.object({
   id: z.string(),

@@ -1,5 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
-import { CreateDestinationInputSchema, UpdateDestinationInputSchema } from '@hookpilot/shared';
+import {
+  CreateDestinationInputSchema,
+  UpdateDestinationInputSchema,
+  TestFilterInputSchema,
+} from '@hookpilot/shared';
 import { destinationService } from '../services/destination.service.js';
 
 export class DestinationController {
@@ -50,6 +54,29 @@ export class DestinationController {
       const id = String(req.params.id);
       await destinationService.deleteDestination(id);
       res.status(200).json({ success: true, message: 'Destination deleted' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async testFilter(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const validated = TestFilterInputSchema.parse(req.body);
+      const workspaceId = req.destination?.workspaceId?.toString();
+      const result = await destinationService.testFilter(id, validated, workspaceId);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async previewFilter(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const workspaceId = req.destination?.workspaceId?.toString();
+      const result = await destinationService.previewFilter(id, workspaceId);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

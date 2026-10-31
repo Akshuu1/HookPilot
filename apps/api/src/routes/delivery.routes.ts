@@ -14,3 +14,7 @@ deliveryRouter.get('/:id', requireDeliveryRole('viewer'), (req, res, next) =>
 deliveryRouter.post('/:id/replay', requireDeliveryRole('member'), (req, res, next) =>
   deliveryController.replay(req, res, next),
 );
+
+deliveryRouter.post('/:id/force-deliver', requireDeliveryRole('member'), (req, res, next) =>
+  deliveryController.forceDeliver(req, res, next),
+);

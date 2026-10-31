@@ -15,6 +15,14 @@ destinationRouter.patch('/:id', requireDestinationRole('member'), (req, res, nex
   destinationController.update(req, res, next),
 );
 
+destinationRouter.post('/:id/test-filter', requireDestinationRole('member'), (req, res, next) =>
+  destinationController.testFilter(req, res, next),
+);
+
+destinationRouter.post('/:id/filter-preview', requireDestinationRole('member'), (req, res, next) =>
+  destinationController.previewFilter(req, res, next),
+);
+
 destinationRouter.delete('/:id', requireDestinationRole('admin'), (req, res, next) =>
   destinationController.delete(req, res, next),
 );

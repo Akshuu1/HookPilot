@@ -1,11 +1,5 @@
 /**
- * Pure function filter evaluator.
- * Phase 14 stub: returns true until Phase 15.
+ * Filter service re-exporting pure filter evaluation and explanation utilities from @hookpilot/shared.
  * Strictly avoids eval, new Function, vm, and regular expressions.
  */
-export function evaluateFilter(
-  _filter?: Record<string, unknown> | null,
-  _event?: unknown,
-): boolean {
-  return true;
-}
+export * from '@hookpilot/shared';

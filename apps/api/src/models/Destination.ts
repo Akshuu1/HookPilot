@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Document, type Types, type Model } from 'mongoose';
+import type { FilterRule } from '@hookpilot/shared';
 
 export interface IDestinationCustomHeader {
   name: string;
@@ -18,7 +19,7 @@ export interface IDestination extends Document {
     maxDelayMs: number;
   };
   rateLimitPerMin?: number | null;
-  filter?: Record<string, unknown> | null;
+  filter?: FilterRule | Record<string, unknown> | null;
   outboundSecretEncrypted?: string | null;
   createdAt: Date;
   updatedAt: Date;

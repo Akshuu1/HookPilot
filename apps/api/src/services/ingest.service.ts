@@ -19,7 +19,7 @@ import { Types } from 'mongoose';
 import { DestinationModel } from '../models/Destination.js';
 import { DeliveryModel } from '../models/Delivery.js';
 import { destinationService, invalidateDestinationCache } from './destination.service.js';
-import { evaluateFilter } from './filter.service.js';
+import { explainFilter } from './filter.service.js';
 import { recomputeEventStatus } from './delivery-status.service.js';
 
 export interface IngestParams {
@@ -234,7 +234,13 @@ export class IngestService {
 
     // 2. Evaluate filter for each destination & prepare Delivery rows
     const deliveriesToInsert = destinations.map((dest) => {
-      const isMatched = evaluateFilter(dest.filter, event);
+      const explanation = explainFilter(dest.filter, {
+        body: event.rawBody,
+        headers: event.headers as Record<string, unknown>,
+        method: event.method,
+        contentType: event.contentType,
+      });
+      const isMatched = explanation.matched;
       return {
         workspaceId: Types.ObjectId.isValid(workspaceId)
           ? new Types.ObjectId(workspaceId)
@@ -245,7 +251,7 @@ export class IngestService {
         attemptCount: 0,
         nextAttemptAt: isMatched && !isCaptureOnly ? new Date() : null,
         lastError: null,
-        filterReason: !isMatched ? 'Filter conditions did not match' : null,
+        filterReason: !isMatched ? explanation.reason || 'Filter conditions did not match' : null,
       };
     });
 

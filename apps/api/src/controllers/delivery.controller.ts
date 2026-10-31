@@ -6,7 +6,19 @@ export class DeliveryController {
     try {
       const deliveryId = String(req.params.id);
       const userId = req.user?.id || 'system';
-      const result = await deliveryService.replayDelivery(deliveryId, userId);
+      const force = Boolean(req.body?.force);
+      const result = await deliveryService.replayDelivery(deliveryId, userId, force);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async forceDeliver(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deliveryId = String(req.params.id);
+      const userId = req.user?.id || 'system';
+      const result = await deliveryService.forceDeliver(deliveryId, userId);
       res.status(200).json(result);
     } catch (err) {
       next(err);

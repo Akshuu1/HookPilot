@@ -4,11 +4,17 @@ import {
   type CreateDestinationInput,
   type UpdateDestinationInput,
   type DestinationResponse,
+  type TestFilterInput,
+  type FilterInput,
+  type FilterExplanation,
+  evaluateFilter,
+  explainFilter,
 } from '@hookpilot/shared';
 import { AppError } from '../middlewares/error-handler.js';
 import { DestinationModel, type IDestination } from '../models/Destination.js';
 import { EndpointModel } from '../models/Endpoint.js';
 import { DeliveryModel } from '../models/Delivery.js';
+import { EventModel } from '../models/Event.js';
 import { encryptSecret } from '../utils/crypto.js';
 import { getRedisClient } from '../config/redis.js';
 import { recomputeEventStatus } from './delivery-status.service.js';
@@ -254,6 +260,109 @@ export class DestinationService {
     await invalidateDestinationCache(endpointId);
 
     return { success: true };
+  }
+
+  async testFilter(
+    destinationId: string,
+    payload: TestFilterInput,
+    workspaceId?: string,
+  ): Promise<{ matched: boolean; explanation: FilterExplanation }> {
+    const doc = await DestinationModel.findById(destinationId);
+    if (!doc) {
+      throw new AppError('Destination not found', 404, 'DESTINATION_NOT_FOUND');
+    }
+
+    if (workspaceId && doc.workspaceId.toString() !== workspaceId) {
+      throw new AppError('Destination not found', 404, 'DESTINATION_NOT_FOUND');
+    }
+
+    let filterInput: FilterInput;
+
+    if (payload.eventId) {
+      const eventFilter = Types.ObjectId.isValid(payload.eventId)
+        ? { _id: new Types.ObjectId(payload.eventId), workspaceId: doc.workspaceId }
+        : { _id: payload.eventId as any, workspaceId: doc.workspaceId };
+      const event = await EventModel.findOne(eventFilter);
+      if (!event) {
+        throw new AppError('Event not found', 404, 'EVENT_NOT_FOUND');
+      }
+
+      let headersObj: Record<string, unknown> = {};
+      if (event.headers instanceof Map) {
+        headersObj = Object.fromEntries(event.headers);
+      } else if (event.headers && typeof event.headers === 'object') {
+        headersObj = event.headers as Record<string, unknown>;
+      }
+
+      filterInput = {
+        body: event.rawBody,
+        headers: headersObj,
+        method: event.method,
+        contentType: event.contentType,
+      };
+    } else if (payload.sample) {
+      filterInput = {
+        body: payload.sample.body,
+        headers: payload.sample.headers,
+        method: payload.sample.method || 'POST',
+        contentType: payload.sample.contentType,
+      };
+    } else {
+      throw new AppError('Either eventId or sample must be provided', 400, 'INVALID_INPUT');
+    }
+
+    const explanation = explainFilter(doc.filter, filterInput);
+    return {
+      matched: explanation.matched,
+      explanation,
+    };
+  }
+
+  async previewFilter(
+    destinationId: string,
+    workspaceId?: string,
+  ): Promise<{ matchedCount: number; totalEvents: number }> {
+    const doc = await DestinationModel.findById(destinationId);
+    if (!doc) {
+      throw new AppError('Destination not found', 404, 'DESTINATION_NOT_FOUND');
+    }
+
+    if (workspaceId && doc.workspaceId.toString() !== workspaceId) {
+      throw new AppError('Destination not found', 404, 'DESTINATION_NOT_FOUND');
+    }
+
+    const events = await EventModel.find({
+      endpointId: doc.endpointId,
+      workspaceId: doc.workspaceId,
+    })
+      .sort({ receivedAt: -1 })
+      .limit(100);
+
+    let matchedCount = 0;
+    for (const ev of events) {
+      let headersObj: Record<string, unknown> = {};
+      if (ev.headers instanceof Map) {
+        headersObj = Object.fromEntries(ev.headers);
+      } else if (ev.headers && typeof ev.headers === 'object') {
+        headersObj = ev.headers as Record<string, unknown>;
+      }
+
+      const isMatched = evaluateFilter(doc.filter, {
+        body: ev.rawBody,
+        headers: headersObj,
+        method: ev.method,
+        contentType: ev.contentType,
+      });
+
+      if (isMatched) {
+        matchedCount++;
+      }
+    }
+
+    return {
+      matchedCount,
+      totalEvents: events.length,
+    };
   }
 }
 

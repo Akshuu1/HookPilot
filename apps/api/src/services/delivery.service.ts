@@ -61,6 +61,7 @@ export class DeliveryService {
   async replayDelivery(
     deliveryId: string,
     userId: string,
+    force = false,
   ): Promise<{ success: boolean; jobId: string; deliveryId: string }> {
     const delivery = await DeliveryModel.findById(deliveryId);
     if (!delivery) {
@@ -70,9 +71,13 @@ export class DeliveryService {
     const n = delivery.attemptCount + 1;
     const jobId = `${delivery._id.toString()}-r${n}`;
 
+    const wasFiltered = delivery.status === 'filtered';
     delivery.status = 'pending';
     delivery.nextAttemptAt = new Date();
     delivery.lastError = null;
+    if (force || wasFiltered) {
+      delivery.filterReason = null;
+    }
     await delivery.save();
 
     // Recompute event status
@@ -99,13 +104,14 @@ export class DeliveryService {
       await auditLogRepository.create({
         workspaceId: delivery.workspaceId.toString(),
         userId,
-        action: 'delivery.replay',
+        action: force ? 'delivery.force_deliver' : 'delivery.replay',
         resourceType: 'delivery',
         resourceId: delivery._id.toString(),
         metadata: {
           eventId: delivery.eventId.toString(),
           destinationId: delivery.destinationId.toString(),
           jobId,
+          forced: force,
         },
       });
     } catch {
@@ -137,6 +143,13 @@ export class DeliveryService {
       jobId,
       deliveryId: delivery._id.toString(),
     };
+  }
+
+  async forceDeliver(
+    deliveryId: string,
+    userId: string,
+  ): Promise<{ success: boolean; jobId: string; deliveryId: string }> {
+    return this.replayDelivery(deliveryId, userId, true);
   }
 
   async listDeliveriesForEvent(eventId: string): Promise<DeliveryResponse[]> {
