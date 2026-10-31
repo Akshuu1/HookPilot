@@ -65,6 +65,7 @@ const deliverySchema = new Schema<IDelivery>(
 
 deliverySchema.index({ eventId: 1, destinationId: 1 }, { unique: true });
 deliverySchema.index({ status: 1, createdAt: 1 });
+deliverySchema.index({ workspaceId: 1, status: 1, updatedAt: 1 });
 
 export const DeliveryModel =
   (mongoose.models.Delivery as Model<IDelivery>) || model<IDelivery>('Delivery', deliverySchema);

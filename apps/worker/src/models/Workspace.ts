@@ -1,0 +1,37 @@
+import { Schema, model, type Document, type Types } from 'mongoose';
+
+export interface IWorkspace extends Document {
+  name: string;
+  ownerId: Types.ObjectId;
+  retentionDays: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const workspaceSchema = new Schema<IWorkspace>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 64,
+    },
+    ownerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    retentionDays: {
+      type: Number,
+      default: 30,
+      min: 1,
+      max: 365,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+export const WorkspaceModel = model<IWorkspace>('Workspace', workspaceSchema);

@@ -15,6 +15,8 @@ import { ingestRouter } from './routes/ingest.routes.js';
 import { eventRouter } from './routes/event.routes.js';
 import { destinationRouter } from './routes/destination.routes.js';
 import { deliveryRouter } from './routes/delivery.routes.js';
+import { alertChannelRouter } from './routes/alert-channel.routes.js';
+import { alertRuleRouter } from './routes/alert-rule.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -81,6 +83,8 @@ export function createApp(): Express {
   app.use('/destinations', destinationRouter);
   app.use('/deliveries', deliveryRouter);
   app.use('/events', eventRouter);
+  app.use('/', alertChannelRouter);
+  app.use('/', alertRuleRouter);
   app.use('/', healthRouter);
 
   // 404 Handler

@@ -80,6 +80,8 @@ deliveryAttemptSchema.index({ eventId: 1, attemptNumber: 1 });
 deliveryAttemptSchema.index({ deliveryId: 1 });
 deliveryAttemptSchema.index({ destinationId: 1 });
 deliveryAttemptSchema.index({ startedAt: -1 });
+deliveryAttemptSchema.index({ workspaceId: 1, status: 1, updatedAt: 1 });
+deliveryAttemptSchema.index({ workspaceId: 1, createdAt: 1 });
 
 export const DeliveryAttemptModel =
   (mongoose.models.DeliveryAttempt as Model<IDeliveryAttempt>) ||

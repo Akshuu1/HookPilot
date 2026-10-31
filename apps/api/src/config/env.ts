@@ -21,6 +21,14 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z
     .string()
     .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+
+  // SMTP & Alerts
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().default(1025),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  ALERT_FROM: z.string().default('alerts@hookpilot.dev'),
+  DASHBOARD_URL: z.string().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);

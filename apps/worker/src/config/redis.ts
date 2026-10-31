@@ -5,6 +5,7 @@ import { logger } from './logger.js';
 
 let redisClient: Redis | null = null;
 let deliveryQueue: Queue | null = null;
+let alertsQueue: Queue | null = null;
 
 export function getRedisClient(): Redis {
   if (!redisClient) {
@@ -42,7 +43,34 @@ export function getDeliveryQueue(): Queue {
   return deliveryQueue;
 }
 
+export function getAlertsQueue(): Queue {
+  if (!alertsQueue) {
+    alertsQueue = new Queue('alerts', {
+      connection: getRedisClient(),
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
+      },
+    });
+
+    alertsQueue.on('error', (err) => {
+      logger.error({ err }, 'Alerts queue error in worker');
+    });
+  }
+
+  return alertsQueue;
+}
+
 export async function closeRedisConnections(): Promise<void> {
+  if (alertsQueue) {
+    await alertsQueue.close();
+    alertsQueue = null;
+  }
   if (deliveryQueue) {
     await deliveryQueue.close();
     deliveryQueue = null;

@@ -46,6 +46,9 @@ services:
       MONGODB_URI: mongodb://mongo:27017/hookpilot
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: http://localhost:5173
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      ALERT_FROM: alerts@hookpilot.dev
     depends_on:
       mongo:
         condition: service_healthy
@@ -71,6 +74,9 @@ services:
       MONGODB_URI: mongodb://mongo:27017/hookpilot
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       CONCURRENCY: 10
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      ALERT_FROM: alerts@hookpilot.dev
     depends_on:
       mongo:
         condition: service_healthy
@@ -96,6 +102,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: hookpilot-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
 
   prometheus:
     image: prom/prometheus:latest

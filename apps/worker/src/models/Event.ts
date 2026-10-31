@@ -116,6 +116,7 @@ const eventSchema = new Schema<IEvent>(
   },
 );
 
+eventSchema.index({ endpointId: 1, receivedAt: 1 });
 eventSchema.index({ endpointId: 1, receivedAt: -1, _id: -1 });
 eventSchema.index({ workspaceId: 1, status: 1, receivedAt: -1 });
 eventSchema.index({ endpointId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
