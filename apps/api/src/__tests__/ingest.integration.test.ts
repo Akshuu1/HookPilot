@@ -133,8 +133,8 @@ describe('Ingest Route Integration Tests (POST|PUT|PATCH /in/:slug)', () => {
     // Verify delivery job was enqueued
     expect(mockQueueAdd).toHaveBeenCalledWith(
       'deliver',
-      { eventId: savedEvent!.id },
-      expect.objectContaining({ jobId: savedEvent!.id }),
+      { deliveryId: expect.any(String) },
+      expect.objectContaining({ jobId: expect.any(String) }),
     );
   });
 

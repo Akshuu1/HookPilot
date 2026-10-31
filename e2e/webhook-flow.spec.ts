@@ -65,7 +65,7 @@ test.describe('End-to-End Webhook Lifecycle Flow', () => {
 
     // Wait for redirect to Endpoints page
     await page.waitForURL('**/endpoints', { timeout: 15000 });
-    await expect(page.locator('h2')).toContainText('Webhook Endpoints');
+    await expect(page.locator('h2')).toContainText(/Webhook (Endpoints|Delivery Network)/);
 
     // ----------------------------------------------------
     // Step 2: Create Workspace
@@ -103,19 +103,6 @@ test.describe('End-to-End Webhook Lifecycle Flow', () => {
       'http://127.0.0.1:3999/webhook',
     );
 
-    // Configure fast retry policy (Max Attempts: 2, Base Delay: 100ms)
-    const maxAttemptsInput = page
-      .locator('label:has-text("Max Attempts")')
-      .locator('..')
-      .locator('input');
-    await maxAttemptsInput.fill('2');
-
-    const baseDelayInput = page
-      .locator('label:has-text("Base Delay")')
-      .locator('..')
-      .locator('input');
-    await baseDelayInput.fill('100');
-
     await page.click('button[type="submit"]:has-text("Create Endpoint")');
 
     // Wait for modal to close
@@ -133,12 +120,53 @@ test.describe('End-to-End Webhook Lifecycle Flow', () => {
     await expect(endpointCard).toBeVisible({ timeout: 10000 });
 
     // Extract endpoint slug from the Ingest URL in the card
-    const ingestUrlDiv = endpointCard.locator('div.text-indigo-300').first();
+    const ingestUrlDiv = endpointCard.locator('div:has-text("/in/")').last();
     await expect(ingestUrlDiv).toBeVisible({ timeout: 5000 });
     const ingestUrlText = await ingestUrlDiv.textContent();
     const slug = ingestUrlText?.split('/in/')[1]?.trim();
     expect(slug).toBeDefined();
     expect(slug!.length).toBeGreaterThan(0);
+
+    // Configure fast retry policy on Destination (Max Attempts: 2, Base Delay: 100ms)
+    await endpointCard.locator('button:has-text("Destinations")').click();
+    await page.waitForTimeout(500);
+
+    // Click Add Destination button
+    const addDestBtn = page
+      .locator('button:has-text("Add Destination"), button:has-text("New Destination")')
+      .first();
+    await expect(addDestBtn).toBeVisible({ timeout: 5000 });
+    await addDestBtn.click();
+
+    await expect(page.locator('h3:has-text("Add Fan-Out Destination")')).toBeVisible({
+      timeout: 5000,
+    });
+    await page.fill('input[placeholder="e.g. Analytics Webhook Service"]', 'Fast Retry Sink');
+    await page.fill(
+      'input[placeholder="https://api.yourdomain.com/hooks"]',
+      'http://127.0.0.1:3999/webhook',
+    );
+
+    // Override retry policy
+    await page.click('button:has-text("Override Retries")');
+    const maxAttemptsInput = page
+      .locator('label:has-text("Max Attempts")')
+      .locator('..')
+      .locator('input');
+    await maxAttemptsInput.fill('2');
+    const baseDelayInput = page
+      .locator('label:has-text("Base Delay")')
+      .locator('..')
+      .locator('input');
+    await baseDelayInput.fill('100');
+
+    await page.click('button[type="submit"]:has-text("Add Destination")');
+    await expect(page.locator('h3:has-text("Add Fan-Out Destination")')).not.toBeVisible({
+      timeout: 5000,
+    });
+
+    // Return to Endpoints overview tab
+    await page.locator('button:has-text("Endpoints")').first().click();
 
     // ----------------------------------------------------
     // Step 4: Send Webhook via Request API (Destination healthy 200 OK)

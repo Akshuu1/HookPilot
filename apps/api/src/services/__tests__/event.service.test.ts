@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Queue } from 'bullmq';
 import { EventService } from '../event.service.js';
@@ -5,6 +6,7 @@ import type { EventRepository } from '../../repositories/event.repository.js';
 import type { AuditLogRepository } from '../../repositories/audit-log.repository.js';
 import type { IEvent } from '../../models/Event.js';
 import type { IAuditLog } from '../../models/AuditLog.js';
+import { DeliveryModel } from '../../models/Delivery.js';
 import * as queueConfig from '../../config/queue.js';
 
 describe('EventService Unit Tests', () => {
@@ -15,6 +17,11 @@ describe('EventService Unit Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.spyOn(DeliveryModel, 'find').mockReturnValue({
+      exec: vi.fn().mockResolvedValue([]),
+      then: (resolve: any) => Promise.resolve([]).then(resolve),
+    } as any);
 
     mockEventRepo = {
       findById: vi.fn(),
