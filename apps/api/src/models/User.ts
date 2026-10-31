@@ -2,8 +2,10 @@ import { Schema, model, type Document } from 'mongoose';
 
 export interface IUser extends Document {
   email: string;
-  passwordHash: string;
+  passwordHash?: string | null;
   name: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,12 +22,22 @@ const userSchema = new Schema<IUser>(
     },
     passwordHash: {
       type: String,
-      required: true,
+      required: false,
+      default: null,
     },
     name: {
       type: String,
       required: true,
       trim: true,
+    },
+    displayName: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    avatarUrl: {
+      type: String,
+      default: null,
     },
   },
   {

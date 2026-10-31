@@ -29,6 +29,14 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   ALERT_FROM: z.string().default('alerts@hookpilot.dev'),
   DASHBOARD_URL: z.string().default('http://localhost:5173'),
+
+  // Phase 19: OAuth Providers & URLs
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  API_PUBLIC_URL: z.string().default('http://localhost:4000'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);

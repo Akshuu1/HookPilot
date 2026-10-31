@@ -1,5 +1,6 @@
 import type { RegisterInput, LoginInput, UserResponse } from '@hookpilot/shared';
 import { AppError } from '../middlewares/error-handler.js';
+import { IdentityModel } from '../models/Identity.js';
 import {
   type UserRepository,
   userRepository as defaultUserRepo,
@@ -63,6 +64,14 @@ export class AuthService {
     const user = await this.userRepo.findByEmail(input.email);
     if (!user) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    }
+
+    if (!user.passwordHash) {
+      throw new AppError(
+        'This account was created with OAuth. Please log in using your connected provider (GitHub or Google).',
+        400,
+        'OAUTH_ACCOUNT_NO_PASSWORD',
+      );
     }
 
     const isValid = await verifyPassword(input.password, user.passwordHash);
@@ -160,15 +169,26 @@ export class AuthService {
       throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 
+    const identities = await IdentityModel.find({ userId: user._id });
+
     return {
       id: user.id,
       email: user.email,
       name: user.name,
+      displayName: user.displayName || null,
+      avatarUrl: user.avatarUrl || null,
+      hasPassword: Boolean(user.passwordHash),
+      identities: identities.map((i) => ({
+        id: i._id.toString(),
+        provider: i.provider,
+        email: i.email,
+        avatarUrl: i.avatarUrl || null,
+      })),
       createdAt: user.createdAt.toISOString(),
     };
   }
 
-  private async createTokens(userId: string, email: string, name: string): Promise<AuthTokens> {
+  async createTokens(userId: string, email: string, name: string): Promise<AuthTokens> {
     const accessToken = signAccessToken({ userId, email, name });
     const rawRefreshToken = generateRandomToken();
     const tokenHash = hashToken(rawRefreshToken);

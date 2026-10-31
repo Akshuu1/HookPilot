@@ -1,9 +1,17 @@
 import { UserModel, type IUser } from '../models/User.js';
 
+export interface CreateUserData {
+  email: string;
+  name: string;
+  passwordHash?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
 export interface UserRepository {
   findByEmail(email: string): Promise<IUser | null>;
   findById(id: string): Promise<IUser | null>;
-  create(data: { email: string; passwordHash: string; name: string }): Promise<IUser>;
+  create(data: CreateUserData): Promise<IUser>;
 }
 
 export class MongoUserRepository implements UserRepository {
@@ -15,11 +23,13 @@ export class MongoUserRepository implements UserRepository {
     return UserModel.findById(id);
   }
 
-  async create(data: { email: string; passwordHash: string; name: string }): Promise<IUser> {
+  async create(data: CreateUserData): Promise<IUser> {
     const user = new UserModel({
       email: data.email.toLowerCase().trim(),
-      passwordHash: data.passwordHash,
+      passwordHash: data.passwordHash || null,
       name: data.name.trim(),
+      displayName: data.displayName?.trim() || null,
+      avatarUrl: data.avatarUrl || null,
     });
     return user.save();
   }

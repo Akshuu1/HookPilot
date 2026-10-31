@@ -3,7 +3,7 @@ import { RegisterInputSchema, LoginInputSchema } from '@hookpilot/shared';
 import { AuthService, authService as defaultAuthService } from '../services/auth.service.js';
 import { env } from '../config/env.js';
 
-const REFRESH_COOKIE_NAME = 'refreshToken';
+export const REFRESH_COOKIE_NAME = 'refreshToken';
 
 export const getRefreshCookieOptions = (): CookieOptions => {
   const isProd = env.NODE_ENV === 'production';

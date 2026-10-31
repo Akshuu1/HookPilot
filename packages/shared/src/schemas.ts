@@ -93,6 +93,19 @@ export const UserResponseSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string(),
+  displayName: z.string().nullable().optional(),
+  avatarUrl: z.string().nullable().optional(),
+  hasPassword: z.boolean().optional(),
+  identities: z
+    .array(
+      z.object({
+        id: z.string(),
+        provider: z.enum(['github', 'google']),
+        email: z.string().email(),
+        avatarUrl: z.string().nullable().optional(),
+      }),
+    )
+    .optional(),
   createdAt: z.string().datetime(),
 });
 
