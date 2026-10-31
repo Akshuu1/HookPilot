@@ -181,7 +181,9 @@ export const EndpointResponseSchema = z.object({
   destinationUrl: z.string(),
   signatureConfig: z.object({
     provider: z.enum(SignatureProviders),
-    secretMasked: z.string().nullable(),
+    secretConfigured: z.boolean().default(false),
+    secretLast4: z.string().nullable().optional(),
+    secretMasked: z.string().nullable().optional(),
     headerName: z.string().optional().nullable(),
     enforce: z.boolean().default(false),
   }),
@@ -194,6 +196,13 @@ export const EndpointResponseSchema = z.object({
 });
 
 export type EndpointResponse = z.infer<typeof EndpointResponseSchema>;
+
+export function isMaskedPlaceholder(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  return (
+    value.includes('****') || value.includes('••••') || /^\*+/.test(value) || /^•+/.test(value)
+  );
+}
 
 // ==========================================
 // Phase 4: Ingest & Event Module

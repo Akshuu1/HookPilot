@@ -28,7 +28,7 @@ export interface EndpointRepository {
   findById(id: string): Promise<IEndpoint | null>;
   findBySlug(slug: string): Promise<IEndpoint | null>;
   findByWorkspace(workspaceId: string): Promise<IEndpoint[]>;
-  update(id: string, data: Partial<IEndpoint>): Promise<IEndpoint | null>;
+  update(id: string, data: Partial<IEndpoint> | Record<string, unknown>): Promise<IEndpoint | null>;
   delete(id: string): Promise<boolean>;
 }
 
@@ -57,7 +57,10 @@ export class MongoEndpointRepository implements EndpointRepository {
     });
   }
 
-  async update(id: string, data: Partial<IEndpoint>): Promise<IEndpoint | null> {
+  async update(
+    id: string,
+    data: Partial<IEndpoint> | Record<string, unknown>,
+  ): Promise<IEndpoint | null> {
     if (!Types.ObjectId.isValid(id)) return null;
     return EndpointModel.findByIdAndUpdate(id, { $set: data }, { new: true });
   }

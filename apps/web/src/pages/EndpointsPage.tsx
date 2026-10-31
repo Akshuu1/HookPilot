@@ -40,6 +40,7 @@ export function EndpointsPage() {
   const [editingEndpoint, setEditingEndpoint] = useState<EndpointResponse | null>(null);
   const [rotatingEndpoint, setRotatingEndpoint] = useState<EndpointResponse | null>(null);
   const [rotatedSecret, setRotatedSecret] = useState<{ raw: string; masked: string } | null>(null);
+  const [isReplacingSecret, setIsReplacingSecret] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -108,6 +109,7 @@ export function EndpointsPage() {
 
   const openCreateModal = () => {
     setEditingEndpoint(null);
+    setIsReplacingSecret(true);
     setName('');
     setDestinationUrl('https://httpbin.org/post');
     setMode('forward');
@@ -124,6 +126,7 @@ export function EndpointsPage() {
 
   const openEditModal = (ep: EndpointResponse) => {
     setEditingEndpoint(ep);
+    setIsReplacingSecret(false);
     setName(ep.name);
     setDestinationUrl(ep.destinationUrl);
     setMode(ep.mode);
@@ -141,10 +144,12 @@ export function EndpointsPage() {
   const closeModal = () => {
     setIsCreateOpen(false);
     setEditingEndpoint(null);
+    setIsReplacingSecret(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const hasSecretToSubmit = (!editingEndpoint || isReplacingSecret) && secret.length > 0;
     const payload: CreateEndpointInput = {
       name: name.trim(),
       destinationUrl: destinationUrl.trim(),
@@ -152,7 +157,7 @@ export function EndpointsPage() {
       rateLimitPerMin,
       signatureConfig: {
         provider,
-        ...(secret ? { secret: secret.trim() } : {}),
+        ...(hasSecretToSubmit ? { secret } : {}),
         ...(headerName ? { headerName: headerName.trim() } : {}),
         enforce: enforceSignature,
       },
@@ -495,19 +500,100 @@ export function EndpointsPage() {
 
               {provider !== 'none' && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                    Secret Key
-                  </label>
-                  <input
-                    type="password"
-                    value={secret}
-                    onChange={(e) => setSecret(e.target.value)}
-                    placeholder={editingEndpoint ? 'Leave empty to keep existing' : 'whsec_...'}
-                    className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 font-mono transition-colors"
-                  />
+                  {editingEndpoint &&
+                  (editingEndpoint.signatureConfig.secretConfigured ||
+                    editingEndpoint.signatureConfig.secretMasked) &&
+                  !isReplacingSecret ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-400 mb-1">
+                        Secret Key
+                      </label>
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-xs">
+                        <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                          <Shield className="h-3.5 w-3.5" />
+                          <span>
+                            Secret configured
+                            {editingEndpoint.signatureConfig.secretLast4
+                              ? ` (••••${editingEndpoint.signatureConfig.secretLast4})`
+                              : editingEndpoint.signatureConfig.secretMasked
+                                ? ` (${editingEndpoint.signatureConfig.secretMasked})`
+                                : ''}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsReplacingSecret(true)}
+                          className="text-[11px] font-semibold text-zinc-200 hover:text-white underline ml-2"
+                        >
+                          Replace secret
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-zinc-400">
+                          {editingEndpoint &&
+                          (editingEndpoint.signatureConfig.secretConfigured ||
+                            editingEndpoint.signatureConfig.secretMasked)
+                            ? 'New Secret Key'
+                            : 'Secret Key'}
+                        </label>
+                        {editingEndpoint &&
+                          (editingEndpoint.signatureConfig.secretConfigured ||
+                            editingEndpoint.signatureConfig.secretMasked) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsReplacingSecret(false);
+                                setSecret('');
+                              }}
+                              className="text-[11px] text-zinc-400 hover:text-white"
+                            >
+                              Keep existing
+                            </button>
+                          )}
+                      </div>
+                      <input
+                        type="password"
+                        value={secret}
+                        onChange={(e) => setSecret(e.target.value)}
+                        placeholder={
+                          editingEndpoint &&
+                          (editingEndpoint.signatureConfig.secretConfigured ||
+                            editingEndpoint.signatureConfig.secretMasked)
+                            ? 'Enter new secret...'
+                            : 'whsec_...'
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 font-mono transition-colors"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Provider change notification */}
+            {editingEndpoint &&
+              provider !== 'none' &&
+              !editingEndpoint.signatureConfig.secretConfigured &&
+              !editingEndpoint.signatureConfig.secretMasked && (
+                <div className="mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 font-sans">
+                  Provider requires a signing secret. Please provide a secret key above.
+                </div>
+              )}
+
+            {editingEndpoint &&
+              provider !== 'none' &&
+              provider !== editingEndpoint.signatureConfig.provider &&
+              (editingEndpoint.signatureConfig.secretConfigured ||
+                editingEndpoint.signatureConfig.secretMasked) &&
+              !isReplacingSecret && (
+                <div className="mb-3 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] text-zinc-400 font-sans">
+                  Provider changed to {provider}. Your existing secret is preserved. Click
+                  &quot;Replace secret&quot; to provide a new one.
+                </div>
+              )}
 
             {provider === 'generic' && (
               <div className="mb-3">

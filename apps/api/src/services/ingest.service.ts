@@ -113,11 +113,7 @@ export class IngestService {
 
     // If signature is invalid AND endpoint enforces validation, reject with 401
     if (!signatureResult.isValid && endpoint.signatureConfig?.enforce) {
-      throw new AppError(
-        `Signature verification failed: ${signatureResult.reason || 'Invalid signature'}`,
-        401,
-        'INVALID_SIGNATURE',
-      );
+      throw new AppError('Webhook signature verification failed', 401, 'INVALID_SIGNATURE');
     }
 
     // Extract idempotency key

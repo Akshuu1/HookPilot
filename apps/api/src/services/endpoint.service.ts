@@ -5,6 +5,7 @@ import {
   type EndpointResponse,
   validateDestinationUrl,
   generateSlug,
+  isMaskedPlaceholder,
 } from '@hookpilot/shared';
 import { AppError } from '../middlewares/error-handler.js';
 import {
@@ -15,13 +16,13 @@ import { encryptSecret, decryptSecret, maskSecret } from '../utils/crypto.js';
 import { getRedisClient } from '../config/redis.js';
 import type { IEndpoint } from '../models/Endpoint.js';
 
-async function invalidateEndpointCache(slug: string): Promise<void> {
+export async function invalidateEndpointCache(slug: string): Promise<void> {
   try {
     const redis = getRedisClient();
-    if (redis.status !== 'ready') {
-      return;
-    }
-    await redis.del(`ep:slug:${slug}`);
+    await Promise.race([
+      redis.del(`ep:slug:${slug}`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 250)),
+    ]);
   } catch {
     // Non-blocking in environments without active Redis
   }
@@ -37,6 +38,19 @@ export class EndpointService {
         'Invalid destination URL: loopback, private, and cloud metadata addresses are forbidden (SSRF guard).',
         400,
         'SSRF_DESTINATION_REJECTED',
+      );
+    }
+
+    const provider = input.signatureConfig?.provider || 'none';
+    const rawSecret = input.signatureConfig?.secret;
+    const hasSecret =
+      typeof rawSecret === 'string' && rawSecret.length > 0 && !isMaskedPlaceholder(rawSecret);
+
+    if (provider !== 'none' && !hasSecret) {
+      throw new AppError(
+        `Provider '${provider}' requires a signing secret. Please provide a secret.`,
+        400,
+        'SECRET_REQUIRED',
       );
     }
 
@@ -59,8 +73,8 @@ export class EndpointService {
     }
 
     let secretEncrypted: string | null = null;
-    if (input.signatureConfig?.secret) {
-      secretEncrypted = encryptSecret(input.signatureConfig.secret);
+    if (hasSecret && rawSecret) {
+      secretEncrypted = encryptSecret(rawSecret);
     }
 
     const endpoint = await this.endpointRepo.create({
@@ -69,7 +83,7 @@ export class EndpointService {
       slug,
       destinationUrl: input.destinationUrl,
       signatureConfig: {
-        provider: input.signatureConfig?.provider || 'none',
+        provider,
         secretEncrypted,
         headerName: input.signatureConfig?.headerName || null,
         enforce: input.signatureConfig?.enforce ?? false,
@@ -117,39 +131,76 @@ export class EndpointService {
       }
     }
 
-    let secretEncrypted = endpoint.signatureConfig.secretEncrypted;
-    if (input.signatureConfig?.secret) {
-      secretEncrypted = encryptSecret(input.signatureConfig.secret);
+    const targetProvider = input.signatureConfig?.provider ?? endpoint.signatureConfig.provider;
+    const existingSecretEncrypted = endpoint.signatureConfig.secretEncrypted;
+
+    const rawSecret = input.signatureConfig?.secret;
+    const isNewSecret =
+      typeof rawSecret === 'string' && rawSecret.length > 0 && !isMaskedPlaceholder(rawSecret);
+
+    let newSecretEncrypted: string | undefined;
+    if (isNewSecret) {
+      newSecretEncrypted = encryptSecret(rawSecret);
     }
 
-    const updated = await this.endpointRepo.update(id, {
-      ...(input.name ? { name: input.name } : {}),
-      ...(input.destinationUrl ? { destinationUrl: input.destinationUrl } : {}),
-      ...(input.rateLimitPerMin !== undefined ? { rateLimitPerMin: input.rateLimitPerMin } : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-      ...(input.mode ? { mode: input.mode } : {}),
-      ...(input.retryPolicy
-        ? {
-            retryPolicy: {
-              maxAttempts: input.retryPolicy.maxAttempts ?? endpoint.retryPolicy.maxAttempts,
-              baseDelayMs: input.retryPolicy.baseDelayMs ?? endpoint.retryPolicy.baseDelayMs,
-              maxDelayMs: input.retryPolicy.maxDelayMs ?? endpoint.retryPolicy.maxDelayMs,
-            },
-          }
-        : {}),
-      signatureConfig: {
-        provider: input.signatureConfig?.provider ?? endpoint.signatureConfig.provider,
-        secretEncrypted: secretEncrypted ?? null,
-        headerName:
-          input.signatureConfig?.headerName ?? endpoint.signatureConfig.headerName ?? null,
-      },
-    });
+    const effectiveSecretEncrypted = isNewSecret ? newSecretEncrypted : existingSecretEncrypted;
 
+    // Changing provider keeps the stored secret. If the new provider needs a secret and none exists, return a 400 validation error instead of silently saving.
+    if (targetProvider !== 'none' && !effectiveSecretEncrypted) {
+      throw new AppError(
+        `Provider '${targetProvider}' requires a signing secret. Please provide a secret.`,
+        400,
+        'SECRET_REQUIRED',
+      );
+    }
+
+    // Partial update using field-level dot paths so secretEncrypted is never clobbered
+    const updateDoc: Record<string, unknown> = {};
+
+    if (input.name !== undefined) updateDoc['name'] = input.name;
+    if (input.destinationUrl !== undefined) updateDoc['destinationUrl'] = input.destinationUrl;
+    if (input.rateLimitPerMin !== undefined) updateDoc['rateLimitPerMin'] = input.rateLimitPerMin;
+    if (input.isActive !== undefined) updateDoc['isActive'] = input.isActive;
+    if (input.mode !== undefined) updateDoc['mode'] = input.mode;
+
+    if (input.retryPolicy) {
+      if (input.retryPolicy.maxAttempts !== undefined) {
+        updateDoc['retryPolicy.maxAttempts'] = input.retryPolicy.maxAttempts;
+      }
+      if (input.retryPolicy.baseDelayMs !== undefined) {
+        updateDoc['retryPolicy.baseDelayMs'] = input.retryPolicy.baseDelayMs;
+      }
+      if (input.retryPolicy.maxDelayMs !== undefined) {
+        updateDoc['retryPolicy.maxDelayMs'] = input.retryPolicy.maxDelayMs;
+      }
+    }
+
+    if (input.signatureConfig) {
+      if (input.signatureConfig.provider !== undefined) {
+        updateDoc['signatureConfig.provider'] = input.signatureConfig.provider;
+      }
+      if (input.signatureConfig.headerName !== undefined) {
+        updateDoc['signatureConfig.headerName'] = input.signatureConfig.headerName;
+      }
+      if (input.signatureConfig.enforce !== undefined) {
+        updateDoc['signatureConfig.enforce'] = input.signatureConfig.enforce;
+      }
+    }
+
+    if (isNewSecret && newSecretEncrypted) {
+      updateDoc['signatureConfig.secretEncrypted'] = newSecretEncrypted;
+    }
+
+    const updated = await this.endpointRepo.update(id, updateDoc);
     if (!updated) {
       throw new AppError('Failed to update endpoint', 500, 'UPDATE_FAILED');
     }
 
-    await invalidateEndpointCache(updated.slug);
+    await invalidateEndpointCache(endpoint.slug);
+    if (updated.slug !== endpoint.slug) {
+      await invalidateEndpointCache(updated.slug);
+    }
+
     return this.toResponse(updated);
   }
 
@@ -171,14 +222,11 @@ export class EndpointService {
       throw new AppError('Endpoint not found', 404, 'NOT_FOUND');
     }
 
-    const rawSecret = providedSecret?.trim() || `whsec_${randomBytes(24).toString('hex')}`;
+    const rawSecret = providedSecret || `whsec_${randomBytes(24).toString('hex')}`;
     const secretEncrypted = encryptSecret(rawSecret);
 
     await this.endpointRepo.update(id, {
-      signatureConfig: {
-        ...endpoint.signatureConfig,
-        secretEncrypted,
-      },
+      'signatureConfig.secretEncrypted': secretEncrypted,
     });
 
     await invalidateEndpointCache(endpoint.slug);
@@ -191,13 +239,17 @@ export class EndpointService {
 
   private toResponse(endpoint: IEndpoint): EndpointResponse {
     let rawSecret: string | null = null;
-    if (endpoint.signatureConfig.secretEncrypted) {
+    if (endpoint.signatureConfig?.secretEncrypted) {
       try {
         rawSecret = decryptSecret(endpoint.signatureConfig.secretEncrypted);
       } catch {
         rawSecret = null;
       }
     }
+
+    const secretConfigured = !!endpoint.signatureConfig?.secretEncrypted;
+    const secretLast4 =
+      rawSecret && rawSecret.length >= 4 ? rawSecret.slice(-4) : rawSecret || null;
 
     return {
       id: endpoint.id,
@@ -207,6 +259,8 @@ export class EndpointService {
       destinationUrl: endpoint.destinationUrl,
       signatureConfig: {
         provider: endpoint.signatureConfig.provider,
+        secretConfigured,
+        secretLast4,
         secretMasked: maskSecret(rawSecret),
         headerName: endpoint.signatureConfig.headerName ?? null,
         enforce: endpoint.signatureConfig.enforce ?? false,
@@ -219,8 +273,8 @@ export class EndpointService {
       rateLimitPerMin: endpoint.rateLimitPerMin,
       isActive: endpoint.isActive,
       mode: endpoint.mode,
-      createdAt: endpoint.createdAt.toISOString(),
-      updatedAt: endpoint.updatedAt.toISOString(),
+      createdAt: new Date(endpoint.createdAt).toISOString(),
+      updatedAt: new Date(endpoint.updatedAt).toISOString(),
     };
   }
 }

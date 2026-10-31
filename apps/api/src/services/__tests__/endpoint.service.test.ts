@@ -194,13 +194,24 @@ describe('EndpointService Unit Tests', () => {
 
       vi.mocked(mockEndpointRepo.findById).mockResolvedValue(existing);
       vi.mocked(mockEndpointRepo.update).mockImplementation(async (_id, data) => {
-        return {
+        const updated = {
           ...existing,
-          ...data,
-          retryPolicy: { ...existing.retryPolicy, ...(data.retryPolicy as object) },
-          signatureConfig: { ...existing.signatureConfig, ...(data.signatureConfig as object) },
+          retryPolicy: { ...existing.retryPolicy },
+          signatureConfig: { ...existing.signatureConfig },
           updatedAt: new Date(),
-        } as unknown as IEndpoint;
+        };
+        for (const [k, v] of Object.entries(data)) {
+          if (k.startsWith('retryPolicy.')) {
+            const field = k.replace('retryPolicy.', '');
+            (updated.retryPolicy as Record<string, unknown>)[field] = v;
+          } else if (k.startsWith('signatureConfig.')) {
+            const field = k.replace('signatureConfig.', '');
+            (updated.signatureConfig as Record<string, unknown>)[field] = v;
+          } else {
+            (updated as Record<string, unknown>)[k] = v;
+          }
+        }
+        return updated as unknown as IEndpoint;
       });
 
       const updated = await service.updateEndpoint('ep-update', {
