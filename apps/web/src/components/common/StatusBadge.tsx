@@ -38,6 +38,30 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
       border: 'border-red-500/30',
       dot: 'bg-red-500',
     },
+    partial: {
+      bg: 'bg-orange-500/10',
+      text: 'text-orange-400',
+      border: 'border-orange-500/20',
+      dot: 'bg-orange-400',
+    },
+    filtered: {
+      bg: 'bg-purple-500/10',
+      text: 'text-purple-400',
+      border: 'border-purple-500/20',
+      dot: 'bg-purple-400',
+    },
+    captured: {
+      bg: 'bg-sky-500/10',
+      text: 'text-sky-400',
+      border: 'border-sky-500/20',
+      dot: 'bg-sky-400',
+    },
+    cancelled: {
+      bg: 'bg-zinc-800/80',
+      text: 'text-zinc-400',
+      border: 'border-zinc-700/50',
+      dot: 'bg-zinc-500',
+    },
   };
 
   const current = styles[status] || {

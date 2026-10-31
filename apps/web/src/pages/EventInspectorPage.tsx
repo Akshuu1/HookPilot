@@ -19,6 +19,9 @@ import {
   Terminal,
   Activity,
   Layers,
+  Send,
+  Filter,
+  Zap,
 } from 'lucide-react';
 import type {
   EventResponse,
@@ -26,9 +29,11 @@ import type {
   EventPubSubMessage,
   PaginatedEventsResponse,
   DeliveryAttemptResponse,
+  DeliveryResponse,
 } from '@hookpilot/shared';
 import { eventsApi } from '../api/events.api.js';
 import { endpointsApi } from '../api/endpoints.api.js';
+import { deliveriesApi } from '../api/deliveries.api.js';
 import { API_URL } from '../api/client.js';
 import { useWorkspaceStore } from '../store/workspace.store.js';
 import { realtimeSocket } from '../realtime/socket.js';
@@ -201,9 +206,40 @@ export function EventInspectorPage() {
       }
     });
 
+    const unsubDeliveryUpdate = realtimeSocket.onDeliveryUpdate((msg: EventPubSubMessage) => {
+      queryClient.setQueryData(
+        queryKey,
+        (oldData: InfiniteData<PaginatedEventsResponse> | undefined) => {
+          if (!oldData || !oldData.pages) return oldData;
+
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: PaginatedEventsResponse) => ({
+              ...page,
+              events: page.events.map((evt: EventResponse) =>
+                evt.id === msg.eventId
+                  ? {
+                      ...evt,
+                      status: msg.status || evt.status,
+                      attemptCount: msg.attemptCount ?? evt.attemptCount,
+                    }
+                  : evt,
+              ),
+            })),
+          };
+        },
+      );
+
+      // Invalidate drawer query if viewing this event
+      if (selectedEventId === msg.eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', msg.eventId] });
+      }
+    });
+
     return () => {
       unsubCreated();
       unsubUpdate();
+      unsubDeliveryUpdate();
     };
   }, [selectedEndpointId, queryKey, queryClient, selectedEventId]);
 
@@ -248,6 +284,28 @@ export function EventInspectorPage() {
   // Single Replay Mutation
   const replayMutation = useMutation({
     mutationFn: (eventId: string) => eventsApi.replay(eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      if (selectedEventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', selectedEventId] });
+      }
+    },
+  });
+
+  // Per-delivery Replay Mutation
+  const replayDeliveryMutation = useMutation({
+    mutationFn: (deliveryId: string) => deliveriesApi.replay(deliveryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      if (selectedEventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', selectedEventId] });
+      }
+    },
+  });
+
+  // Per-delivery Force Deliver Mutation (for filtered deliveries)
+  const forceDeliverMutation = useMutation({
+    mutationFn: (deliveryId: string) => deliveriesApi.forceDeliver(deliveryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       if (selectedEventId) {
@@ -364,7 +422,19 @@ export function EventInspectorPage() {
 
         {/* Status Filters */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 font-mono text-xs">
-          {(['all', 'pending', 'delivering', 'delivered', 'failed', 'dead'] as const).map((st) => (
+          {(
+            [
+              'all',
+              'pending',
+              'delivering',
+              'delivered',
+              'partial',
+              'failed',
+              'dead',
+              'filtered',
+              'captured',
+            ] as const
+          ).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -645,14 +715,153 @@ export function EventInspectorPage() {
               />
             </div>
 
-            {/* Delivery Attempts Timeline */}
+            {/* Fan-Out Destinations & Delivery Attempts Timeline */}
             <div>
-              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Activity className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Delivery Attempts Timeline ({drawerEvent.attempts?.length || 0})</span>
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Send className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>
+                    Destinations & Deliveries (
+                    {drawerEvent.deliveries?.length || drawerEvent.attempts?.length || 0})
+                  </span>
+                </div>
               </h4>
 
-              {!drawerEvent.attempts || drawerEvent.attempts.length === 0 ? (
+              {drawerEvent.deliveries && drawerEvent.deliveries.length > 0 ? (
+                <div className="space-y-4">
+                  {drawerEvent.deliveries.map((del: DeliveryResponse) => (
+                    <div
+                      key={del.id}
+                      className="rounded-xl border border-white/[0.08] bg-zinc-950/80 p-4 space-y-3"
+                    >
+                      {/* Destination Row Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-zinc-100 text-sm">
+                              {del.destinationName || 'Destination'}
+                            </span>
+                            <StatusBadge status={del.status} size="sm" />
+                          </div>
+                          {del.destinationUrl && (
+                            <div className="text-xs font-mono text-zinc-400 truncate max-w-md mt-0.5">
+                              {del.destinationUrl}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Per-delivery Action Buttons */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {del.status === 'filtered' ? (
+                            <button
+                              type="button"
+                              onClick={() => forceDeliverMutation.mutate(del.id)}
+                              disabled={isViewer || forceDeliverMutation.isPending}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 text-xs font-semibold transition-colors disabled:opacity-40"
+                              title="Force deliver this filtered webhook"
+                            >
+                              <Zap className="h-3.5 w-3.5 text-purple-400" />
+                              <span>
+                                {forceDeliverMutation.isPending ? 'Delivering...' : 'Force Deliver'}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => replayDeliveryMutation.mutate(del.id)}
+                              disabled={isViewer || replayDeliveryMutation.isPending}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08] text-xs font-semibold transition-colors disabled:opacity-40"
+                              title="Replay delivery for this destination"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5 text-emerald-400" />
+                              <span>
+                                {replayDeliveryMutation.isPending ? 'Replaying...' : 'Replay'}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Filter Reason (if filtered or exists) */}
+                      {del.filterReason && (
+                        <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 flex items-start gap-2 font-mono">
+                          <Filter className="h-3.5 w-3.5 text-purple-400 mt-0.5 shrink-0" />
+                          <div>
+                            <span className="font-semibold block text-[11px] uppercase tracking-wider text-purple-400">
+                              Filter Reason
+                            </span>
+                            <span>{del.filterReason}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delivery Attempts Timeline for this Destination */}
+                      {del.attempts && del.attempts.length > 0 ? (
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                            Attempt History ({del.attempts.length})
+                          </span>
+                          <div className="space-y-2">
+                            {del.attempts.map((att: DeliveryAttemptResponse) => (
+                              <div
+                                key={att.id}
+                                className="p-3 rounded-lg border border-white/[0.04] bg-zinc-900/50 space-y-2 text-xs"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-zinc-200">
+                                      Attempt #{att.attemptNumber}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        att.success
+                                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                      }`}
+                                    >
+                                      HTTP {att.responseStatus}
+                                    </span>
+                                  </div>
+                                  <span className="text-zinc-400 font-mono text-[11px]">
+                                    {att.durationMs}ms
+                                  </span>
+                                </div>
+
+                                {att.error && (
+                                  <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2 rounded-lg font-mono">
+                                    {att.error}
+                                  </div>
+                                )}
+
+                                {att.responseBodySnippet && (
+                                  <div>
+                                    <span className="text-[10px] font-semibold text-zinc-500 uppercase block mb-1">
+                                      Response Snippet
+                                    </span>
+                                    <pre className="text-[11px] font-mono text-zinc-400 bg-zinc-950 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-20">
+                                      {att.responseBodySnippet}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                <div className="text-[10px] text-zinc-500">
+                                  {new Date(att.startedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-zinc-500 italic">
+                          {del.status === 'filtered'
+                            ? 'No HTTP attempts made (filtered by rule).'
+                            : 'No HTTP attempts recorded yet.'}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : !drawerEvent.attempts || drawerEvent.attempts.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed border-white/[0.08] text-center text-xs text-zinc-500">
                   No delivery attempts recorded yet. Status: {drawerEvent.status}.
                 </div>

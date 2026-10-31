@@ -6,7 +6,7 @@ export function Sidebar() {
   const links = [
     {
       to: '/endpoints',
-      label: 'Endpoints',
+      label: 'Endpoints & Destinations',
       icon: Webhook,
     },
     {
@@ -27,9 +27,9 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-16 my-auto ml-3 py-4 shrink-0 hidden md:flex flex-col items-center justify-center gap-4 z-30 select-none">
+    <aside className="fixed left-3.5 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col items-center justify-center gap-3 select-none">
       {/* Floating Pill Dock */}
-      <div className="w-12 rounded-full border border-white/[0.12] bg-[#121215]/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] py-3 px-1.5 flex flex-col items-center gap-2 ring-1 ring-white/[0.05]">
+      <div className="w-12 rounded-full border border-white/[0.12] bg-[#121215]/95 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.7)] py-2.5 px-1.5 flex flex-col items-center gap-2 ring-1 ring-white/[0.06]">
         {links.map((link) => {
           const Icon = link.icon;
           return (
@@ -41,7 +41,7 @@ export function Sidebar() {
                 clsx(
                   'relative h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 group',
                   isActive
-                    ? 'bg-[#ccff00] text-black shadow-[0_0_16px_rgba(204,255,0,0.45)] ring-2 ring-[#ccff00]/30'
+                    ? 'bg-[#ccff00] text-black shadow-[0_0_16px_rgba(204,255,0,0.5)] ring-2 ring-[#ccff00]/40'
                     : 'text-zinc-400 hover:text-white hover:bg-white/[0.08]',
                 )
               }
@@ -68,7 +68,7 @@ export function Sidebar() {
       {/* Live Stream Pulse Pill */}
       <div
         title="WebSocket live stream active"
-        className="h-8 w-8 rounded-full border border-white/[0.08] bg-[#121215]/90 flex items-center justify-center backdrop-blur-md shadow-lg"
+        className="h-7 w-7 rounded-full border border-white/[0.1] bg-[#121215]/95 flex items-center justify-center backdrop-blur-md shadow-lg"
       >
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

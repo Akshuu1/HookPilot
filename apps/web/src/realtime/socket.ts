@@ -11,6 +11,7 @@ class RealtimeSocketManager {
   private currentWorkspaceId: string | null = null;
   private createdListeners: Set<RealtimeListener> = new Set();
   private updateListeners: Set<RealtimeListener> = new Set();
+  private deliveryUpdateListeners: Set<RealtimeListener> = new Set();
 
   connect() {
     const token = useAuthStore.getState().accessToken;
@@ -55,6 +56,10 @@ class RealtimeSocketManager {
     this.socket.on('event:update', (data: EventPubSubMessage) => {
       this.updateListeners.forEach((fn) => fn(data));
     });
+
+    this.socket.on('delivery:update', (data: EventPubSubMessage) => {
+      this.deliveryUpdateListeners.forEach((fn) => fn(data));
+    });
   }
 
   joinWorkspace(workspaceId: string) {
@@ -83,6 +88,13 @@ class RealtimeSocketManager {
     this.updateListeners.add(listener);
     return () => {
       this.updateListeners.delete(listener);
+    };
+  }
+
+  onDeliveryUpdate(listener: RealtimeListener): () => void {
+    this.deliveryUpdateListeners.add(listener);
+    return () => {
+      this.deliveryUpdateListeners.delete(listener);
     };
   }
 
