@@ -1,18 +1,38 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Shield, Key, Trash2, UserPlus, Building, CheckCircle2, Lock } from 'lucide-react';
+import {
+  Users,
+  Shield,
+  Key,
+  Trash2,
+  UserPlus,
+  Building,
+  CheckCircle2,
+  Lock,
+  Link2,
+} from 'lucide-react';
 import type { WorkspaceRole } from '@hookpilot/shared';
 import { workspacesApi, type WorkspaceMember } from '../api/workspaces.api.js';
+import { authApi } from '../api/auth.api.js';
 import { useWorkspaceStore } from '../store/workspace.store.js';
 import { useAuthStore } from '../store/auth.store.js';
 import { LoadingSpinner } from '../components/common/LoadingSpinner.js';
 import { ErrorAlert } from '../components/common/ErrorAlert.js';
 import { Modal } from '../components/common/Modal.js';
+import { GitHubIcon, GoogleIcon } from '../components/common/BrandIcons.js';
+import { getOAuthErrorMessage } from '../utils/oauth.js';
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspace, setCurrentWorkspace } = useWorkspaceStore();
-  const { user } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wsStore = useWorkspaceStore();
+  const currentWorkspace =
+    wsStore.currentWorkspace || useWorkspaceStore.getState().currentWorkspace;
+  const setCurrentWorkspace = wsStore.setCurrentWorkspace;
+
+  const authStore = useAuthStore();
+  const user = authStore.user || useAuthStore.getState().user;
   const workspaceId = currentWorkspace?.id;
 
   // Workspace settings state
@@ -26,12 +46,113 @@ export function SettingsPage() {
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
 
+  // Connected accounts state
+  const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<'github' | 'google' | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentWorkspace) {
       setWorkspaceName(currentWorkspace.name);
       setRetentionDays(currentWorkspace.retentionDays || 30);
     }
   }, [currentWorkspace]);
+
+  // Fetch current user and identities
+  const { data: meData } = useQuery({
+    queryKey: ['me'],
+    queryFn: async () => {
+      const res = await authApi.getMe();
+      return res.user;
+    },
+    initialData: user || undefined,
+  });
+
+  const currentUser = meData || user;
+
+  // Fetch configured OAuth providers
+  const { data: providersConfig } = useQuery({
+    queryKey: ['oauth-providers'],
+    queryFn: () => authApi.getProviders(),
+  });
+  const providers = providersConfig?.providers ?? { github: true, google: true };
+
+  // Inspect query params for linking feedback
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success === 'oauth_linked') {
+      setAccountSuccess('Connected account successfully linked!');
+      authApi.getMe().then((res) => {
+        if (res?.user) {
+          useAuthStore.getState().setAuth(res.user, useAuthStore.getState().accessToken!);
+          queryClient.invalidateQueries({ queryKey: ['me'] });
+        }
+      });
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.delete('success');
+        return next;
+      });
+      setTimeout(() => setAccountSuccess(null), 4000);
+    }
+
+    const err = searchParams.get('error');
+    if (err) {
+      setAccountError(getOAuthErrorMessage(err));
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.delete('error');
+        return next;
+      });
+      setTimeout(() => setAccountError(null), 6000);
+    }
+  }, [searchParams, setSearchParams, queryClient]);
+
+  // Check if a linked identity is the user's only login method
+  const githubIdentity = currentUser?.identities?.find((i) => i.provider === 'github');
+  const googleIdentity = currentUser?.identities?.find((i) => i.provider === 'google');
+  const isLastLoginMethod =
+    !currentUser?.hasPassword && (currentUser?.identities?.length || 0) <= 1;
+
+  const handleConnect = async (provider: 'github' | 'google') => {
+    if (connectingProvider) return;
+    setConnectingProvider(provider);
+    setAccountError(null);
+    try {
+      const res = await authApi.linkStart(provider, '/settings');
+      if (res?.url) {
+        window.location.href = res.url;
+      }
+    } catch (err: unknown) {
+      setConnectingProvider(null);
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      setAccountError(
+        axiosErr.response?.data?.error?.message || `Failed to initiate ${provider} connection`,
+      );
+    }
+  };
+
+  const handleDisconnect = async (identityId: string) => {
+    if (disconnectingId || isLastLoginMethod) return;
+    setDisconnectingId(identityId);
+    setAccountError(null);
+    try {
+      await authApi.unlinkIdentity(identityId);
+      const res = await authApi.getMe();
+      if (res?.user) {
+        useAuthStore.getState().setAuth(res.user, useAuthStore.getState().accessToken!);
+        queryClient.invalidateQueries({ queryKey: ['me'] });
+      }
+      setAccountSuccess('Account disconnected successfully');
+      setTimeout(() => setAccountSuccess(null), 3000);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      setAccountError(axiosErr.response?.data?.error?.message || 'Failed to disconnect account');
+    } finally {
+      setDisconnectingId(null);
+    }
+  };
 
   // Fetch workspace members
   const {
@@ -126,7 +247,8 @@ export function SettingsPage() {
           Workspace Settings
         </h2>
         <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-          Manage workspace profile, retention TTL policy, team access, and role permissions.
+          Manage workspace profile, retention TTL policy, connected logins, team access, and role
+          permissions.
         </p>
       </div>
 
@@ -199,6 +321,208 @@ export function SettingsPage() {
             </div>
           )}
         </form>
+      </section>
+
+      {/* Connected Accounts */}
+      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/[0.03]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2.5 text-sm font-bold text-zinc-100 font-sans tracking-tight">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <Link2 className="h-4 w-4" />
+              </div>
+              <span>Connected Accounts</span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+              Link your GitHub or Google accounts to log in with a single click.
+            </p>
+          </div>
+        </div>
+
+        {accountSuccess && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2 font-sans">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span>{accountSuccess}</span>
+          </div>
+        )}
+
+        {accountError && (
+          <div className="mb-4">
+            <ErrorAlert message={accountError} />
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {/* GitHub Provider Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-white/[0.08] bg-zinc-950/60 gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 rounded-xl bg-zinc-900 border border-white/[0.1] text-zinc-100 flex items-center justify-center shrink-0">
+                <GitHubIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-100">GitHub</span>
+                  {githubIdentity ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-400 border border-white/[0.06] uppercase tracking-wider">
+                      Not Connected
+                    </span>
+                  )}
+                </div>
+                {githubIdentity ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    {githubIdentity.avatarUrl && (
+                      <img
+                        src={githubIdentity.avatarUrl}
+                        alt="GitHub avatar"
+                        className="h-4 w-4 rounded-full border border-white/20 object-cover"
+                      />
+                    )}
+                    <span className="text-[11px] text-zinc-400 font-mono">
+                      {githubIdentity.email}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                    Link your GitHub account for instant sign-in.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              {githubIdentity ? (
+                <div className="relative group/tip inline-block">
+                  <button
+                    type="button"
+                    disabled={isLastLoginMethod || disconnectingId === githubIdentity.id}
+                    onClick={() => handleDisconnect(githubIdentity.id)}
+                    title={
+                      isLastLoginMethod
+                        ? 'Cannot disconnect your only login method. Please add a password or connect another provider first.'
+                        : undefined
+                    }
+                    className="px-3.5 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <span>
+                      {disconnectingId === githubIdentity.id ? 'Disconnecting...' : 'Disconnect'}
+                    </span>
+                  </button>
+                  {isLastLoginMethod && (
+                    <div className="absolute right-0 bottom-full mb-1.5 hidden group-hover/tip:block z-20 w-64 p-2 rounded-lg bg-zinc-900 border border-white/10 text-[11px] text-zinc-300 shadow-xl leading-snug">
+                      Cannot disconnect your only login method. Please add a password or connect
+                      another provider first.
+                    </div>
+                  )}
+                </div>
+              ) : providers.github ? (
+                <button
+                  type="button"
+                  disabled={!!connectingProvider}
+                  onClick={() => handleConnect('github')}
+                  className="px-3.5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <GitHubIcon className="h-3.5 w-3.5" />
+                  <span>
+                    {connectingProvider === 'github' ? 'Connecting...' : 'Connect GitHub'}
+                  </span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-zinc-500 font-mono italic">
+                  Not configured on server
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Google Provider Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-white/[0.08] bg-zinc-950/60 gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 rounded-xl bg-zinc-900 border border-white/[0.1] text-zinc-100 flex items-center justify-center shrink-0">
+                <GoogleIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-100">Google</span>
+                  {googleIdentity ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-400 border border-white/[0.06] uppercase tracking-wider">
+                      Not Connected
+                    </span>
+                  )}
+                </div>
+                {googleIdentity ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    {googleIdentity.avatarUrl && (
+                      <img
+                        src={googleIdentity.avatarUrl}
+                        alt="Google avatar"
+                        className="h-4 w-4 rounded-full border border-white/20 object-cover"
+                      />
+                    )}
+                    <span className="text-[11px] text-zinc-400 font-mono">
+                      {googleIdentity.email}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                    Link your Google account for single sign-on access.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              {googleIdentity ? (
+                <div className="relative group/tip inline-block">
+                  <button
+                    type="button"
+                    disabled={isLastLoginMethod || disconnectingId === googleIdentity.id}
+                    onClick={() => handleDisconnect(googleIdentity.id)}
+                    title={
+                      isLastLoginMethod
+                        ? 'Cannot disconnect your only login method. Please add a password or connect another provider first.'
+                        : undefined
+                    }
+                    className="px-3.5 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <span>
+                      {disconnectingId === googleIdentity.id ? 'Disconnecting...' : 'Disconnect'}
+                    </span>
+                  </button>
+                  {isLastLoginMethod && (
+                    <div className="absolute right-0 bottom-full mb-1.5 hidden group-hover/tip:block z-20 w-64 p-2 rounded-lg bg-zinc-900 border border-white/10 text-[11px] text-zinc-300 shadow-xl leading-snug">
+                      Cannot disconnect your only login method. Please add a password or connect
+                      another provider first.
+                    </div>
+                  )}
+                </div>
+              ) : providers.google ? (
+                <button
+                  type="button"
+                  disabled={!!connectingProvider}
+                  onClick={() => handleConnect('google')}
+                  className="px-3.5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <GoogleIcon className="h-3.5 w-3.5" />
+                  <span>
+                    {connectingProvider === 'google' ? 'Connecting...' : 'Connect Google'}
+                  </span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-zinc-500 font-mono italic">
+                  Not configured on server
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Team Members & Roles */}

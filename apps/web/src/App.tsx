@@ -4,6 +4,7 @@ import { useAuthStore } from './store/auth.store.js';
 import { authApi } from './api/auth.api.js';
 import { AppLayout } from './components/layout/AppLayout.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { OAuthCallbackPage } from './pages/OAuthCallbackPage.js';
 import { EndpointsPage } from './pages/EndpointsPage.js';
 import { EventInspectorPage } from './pages/EventInspectorPage.js';
 import { AlertsPage } from './pages/AlertsPage.js';
@@ -63,6 +64,7 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<OAuthCallbackPage />} />
 
         <Route
           element={

@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30000,
     hookTimeout: 60000,
-    include: ['**/*.test.ts', '**/*.spec.ts'],
+    include: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/*.e2e.*'],
     coverage: {
       provider: 'v8',

@@ -1,21 +1,85 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import { authApi } from '../api/auth.api.js';
 import { API_URL } from '../api/client.js';
 import { useAuthStore } from '../store/auth.store.js';
 import { ErrorAlert } from '../components/common/ErrorAlert.js';
+import { GitHubIcon, GoogleIcon } from '../components/common/BrandIcons.js';
+import { sanitizeRelativePath, getOAuthErrorMessage } from '../utils/oauth.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
-  const [isRegister, setIsRegister] = useState(false);
 
+  const [isRegister, setIsRegister] = useState(location.pathname === '/register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    () => getOAuthErrorMessage(searchParams.get('error')) || null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [navigatingProvider, setNavigatingProvider] = useState<'github' | 'google' | null>(null);
+
+  // Enabled provider statuses from server
+  const [providers, setProviders] = useState<{ github: boolean; google: boolean }>({
+    github: true,
+    google: true,
+  });
+
+  // Keep isRegister in sync if path changes between /login and /register
+  useEffect(() => {
+    setIsRegister(location.pathname === '/register');
+  }, [location.pathname]);
+
+  // Fetch configured providers from backend
+  useEffect(() => {
+    let isMounted = true;
+    authApi
+      .getProviders()
+      .then((res) => {
+        if (isMounted && res?.providers) {
+          setProviders(res.providers);
+        }
+      })
+      .catch(() => {
+        // Fallback default allows discovery unless explicitly disabled
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Inspect query params for friendly OAuth error messages
+  useEffect(() => {
+    const queryError = searchParams.get('error');
+    if (queryError) {
+      const friendly = getOAuthErrorMessage(queryError);
+      if (friendly) {
+        setError(friendly);
+      }
+    }
+  }, [searchParams]);
+
+  // Determine safe intended redirect path
+  const returnTo = sanitizeRelativePath(
+    (location.state as { from?: { pathname?: string } })?.from?.pathname ||
+      searchParams.get('returnTo'),
+    '/endpoints',
+  );
+
+  const handleOAuthClick = (provider: 'github' | 'google') => {
+    if (navigatingProvider) return;
+    setNavigatingProvider(provider);
+    // Direct full-page navigation to OAuth start endpoint
+    window.location.href = `${API_URL}/auth/oauth/${provider}/start?returnTo=${encodeURIComponent(
+      returnTo,
+    )}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +122,8 @@ export function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  const hasAnyOAuthProvider = providers.github || providers.google;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col justify-center items-center p-6 selection:bg-[#ccff00]/20 selection:text-[#ccff00] relative overflow-hidden font-sans">
@@ -118,6 +184,56 @@ export function LoginPage() {
             </div>
           )}
 
+          {/* Social OAuth Providers */}
+          {hasAnyOAuthProvider && (
+            <div className="space-y-2.5 mb-6">
+              {providers.github && (
+                <button
+                  type="button"
+                  aria-label="Continue with GitHub"
+                  disabled={!!navigatingProvider || isSubmitting}
+                  onClick={() => handleOAuthClick('github')}
+                  className="w-full py-2.5 px-4 rounded-xl border border-white/[0.12] bg-zinc-950/80 hover:bg-zinc-800 text-zinc-100 font-semibold text-xs shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  <GitHubIcon className="h-4 w-4" />
+                  <span>
+                    {navigatingProvider === 'github'
+                      ? 'Redirecting to GitHub...'
+                      : 'Continue with GitHub'}
+                  </span>
+                </button>
+              )}
+
+              {providers.google && (
+                <button
+                  type="button"
+                  aria-label="Continue with Google"
+                  disabled={!!navigatingProvider || isSubmitting}
+                  onClick={() => handleOAuthClick('google')}
+                  className="w-full py-2.5 px-4 rounded-xl border border-white/[0.12] bg-zinc-950/80 hover:bg-zinc-800 text-zinc-100 font-semibold text-xs shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  <GoogleIcon className="h-4 w-4" />
+                  <span>
+                    {navigatingProvider === 'google'
+                      ? 'Redirecting to Google...'
+                      : 'Continue with Google'}
+                  </span>
+                </button>
+              )}
+
+              {/* 'or' divider */}
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/[0.08]" />
+                </div>
+                <div className="relative flex justify-center text-[11px] uppercase">
+                  <span className="bg-[#121215] px-2.5 text-zinc-500 font-mono">or</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Email / Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRegister && (
               <div>
@@ -166,7 +282,7 @@ export function LoginPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !!navigatingProvider}
               className="w-full mt-2 py-3 px-4 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-semibold text-xs shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               <span>
