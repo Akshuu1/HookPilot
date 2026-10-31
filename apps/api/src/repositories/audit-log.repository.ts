@@ -19,8 +19,12 @@ export interface AuditLogRepository {
 export class MongoAuditLogRepository implements AuditLogRepository {
   async create(data: CreateAuditLogData): Promise<IAuditLog> {
     const log = new AuditLogModel({
-      workspaceId: new Types.ObjectId(data.workspaceId),
-      userId: new Types.ObjectId(data.userId),
+      workspaceId: Types.ObjectId.isValid(data.workspaceId)
+        ? new Types.ObjectId(data.workspaceId)
+        : (data.workspaceId as any),
+      userId: Types.ObjectId.isValid(data.userId)
+        ? new Types.ObjectId(data.userId)
+        : (data.userId as any),
       action: data.action,
       resourceType: data.resourceType || 'event',
       resourceId: data.resourceId,

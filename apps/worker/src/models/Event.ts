@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Types } from 'mongoose';
+import mongoose, { Schema, model, type Document, type Types, type Model } from 'mongoose';
 import { EventStatuses, type EventStatus } from '@hookpilot/shared';
 
 export interface IEvent extends Document {
@@ -122,4 +122,5 @@ eventSchema.index({ endpointId: 1, idempotencyKey: 1 }, { unique: true, sparse: 
 eventSchema.index({ searchIndex: 'text', rawBody: 'text' });
 eventSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const EventModel = model<IEvent>('Event', eventSchema);
+export const EventModel =
+  (mongoose.models.Event as Model<IEvent>) || model<IEvent>('Event', eventSchema);

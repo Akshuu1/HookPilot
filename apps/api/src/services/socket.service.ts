@@ -138,6 +138,15 @@ export function createSocketServer(
 
         if (data.type === 'event.created') {
           io.local.to(room).emit('event:created', data);
+        } else if (data.type === 'delivery.update' || data.type === 'delivery.status_changed') {
+          const resLabel =
+            data.status === 'delivered'
+              ? 'success'
+              : data.status === 'dead'
+                ? 'permanent'
+                : 'retryable';
+          deliveryAttemptsTotal.inc({ endpoint: data.endpointId || 'unknown', result: resLabel });
+          io.local.to(room).emit('delivery:update', data);
         } else {
           // 'event.status_changed', 'event.dead', or other updates
           const resLabel =
@@ -146,7 +155,7 @@ export function createSocketServer(
               : data.status === 'dead'
                 ? 'permanent'
                 : 'retryable';
-          deliveryAttemptsTotal.inc({ endpoint: data.endpointId, result: resLabel });
+          deliveryAttemptsTotal.inc({ endpoint: data.endpointId || 'unknown', result: resLabel });
           io.local.to(room).emit('event:update', data);
         }
       } catch (parseErr) {

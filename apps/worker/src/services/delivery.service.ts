@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import type { IEvent } from '../models/Event.js';
 import type { IEndpoint } from '../models/Endpoint.js';
+import type { IDestination } from '../models/Destination.js';
 import { decryptSecret } from '../utils/crypto.js';
 import { getRedisClient } from '../config/redis.js';
 import { logger } from '../config/logger.js';
@@ -309,5 +310,132 @@ export async function performTunnelDelivery(
   } catch (err) {
     logger.error({ err, eventId: eventIdStr }, 'Unexpected error in performTunnelDelivery');
     return null;
+  }
+}
+
+/**
+ * Performs HTTP POST delivery to a Destination URL using destination-specific custom headers and secret.
+ */
+export async function performDestinationDelivery(
+  event: IEvent,
+  destination: IDestination,
+  endpoint: IEndpoint,
+  attemptNumber: number,
+  timeoutMs = 10000,
+): Promise<DeliveryResult> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const safeHeaders: Record<string, string> = {};
+
+  const sourceHeaders =
+    event.headers instanceof Map ? Object.fromEntries(event.headers) : event.headers || {};
+
+  for (const [key, value] of Object.entries(sourceHeaders)) {
+    const lowerKey = key.toLowerCase();
+    if (!HOP_BY_HOP_HEADERS.has(lowerKey) && typeof value === 'string') {
+      safeHeaders[lowerKey] = value;
+    }
+  }
+
+  if (event.contentType && !safeHeaders['content-type']) {
+    safeHeaders['content-type'] = event.contentType;
+  }
+
+  const eventIdStr = event._id ? event._id.toString() : event.id;
+  safeHeaders['x-hookpilot-event-id'] = eventIdStr;
+  safeHeaders['x-hookpilot-attempt'] = attemptNumber.toString();
+
+  // Decrypt and apply Destination custom headers
+  if (destination.customHeaders && destination.customHeaders.length > 0) {
+    for (const h of destination.customHeaders) {
+      try {
+        safeHeaders[h.name.toLowerCase()] = decryptSecret(h.valueEncrypted);
+      } catch {
+        safeHeaders[h.name.toLowerCase()] = '';
+      }
+    }
+  }
+
+  // Compute outbound signature using Destination secret if configured, else Endpoint secret, else slug
+  let signingSecret: string = endpoint.slug;
+  if (destination.outboundSecretEncrypted) {
+    try {
+      signingSecret = decryptSecret(destination.outboundSecretEncrypted);
+    } catch {
+      signingSecret = endpoint.slug;
+    }
+  } else if (endpoint.signatureConfig?.secretEncrypted) {
+    try {
+      signingSecret = decryptSecret(endpoint.signatureConfig.secretEncrypted);
+    } catch {
+      signingSecret = endpoint.slug;
+    }
+  }
+
+  const signaturePayload = `${timestamp}.${event.rawBody}`;
+  const hmac = createHmac('sha256', signingSecret).update(signaturePayload).digest('hex');
+  safeHeaders['x-hookpilot-signature'] = `t=${timestamp},v1=${hmac}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(destination.url, {
+      method: 'POST',
+      headers: safeHeaders,
+      body: event.rawBody,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const durationMs = Date.now() - startTime;
+
+    let responseBodySnippet = '';
+    try {
+      const fullText = await response.text();
+      responseBodySnippet = fullText.slice(0, 2048);
+    } catch {
+      responseBodySnippet = '';
+    }
+
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key.toLowerCase()] = value;
+    });
+
+    const retryAfterHeader = response.headers.get('retry-after');
+    const retryAfterSec = parseRetryAfter(retryAfterHeader);
+
+    return {
+      status: response.status,
+      durationMs,
+      responseBodySnippet,
+      error: response.ok ? null : `HTTP ${response.status}`,
+      requestHeaders: safeHeaders,
+      responseHeaders,
+      retryAfterSec,
+    };
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    const durationMs = Date.now() - startTime;
+    const errorObj = err as Error;
+
+    let status = 0;
+    let errorMsg = errorObj.message || 'Network error';
+
+    if (errorObj.name === 'AbortError') {
+      status = 408;
+      errorMsg = 'Request timed out after 10000ms';
+    }
+
+    return {
+      status,
+      durationMs,
+      responseBodySnippet: '',
+      error: errorMsg,
+      requestHeaders: safeHeaders,
+      responseHeaders: {},
+      retryAfterSec: null,
+    };
   }
 }

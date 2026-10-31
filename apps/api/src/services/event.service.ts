@@ -23,6 +23,9 @@ import { getRedisClient } from '../config/redis.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { IEvent } from '../models/Event.js';
 import type { IDeliveryAttempt } from '../models/DeliveryAttempt.js';
+import { DeliveryModel } from '../models/Delivery.js';
+import { deliveryService } from './delivery.service.js';
+import { recomputeEventStatus } from './delivery-status.service.js';
 
 export function toEventResponse(event: IEvent): EventResponse {
   const headersObj =
@@ -110,17 +113,86 @@ export class EventService {
 
     const eventResp = toEventResponse(result.event);
     const attempts = result.attempts.map(toAttemptResponse);
+    const deliveries = await deliveryService.listDeliveriesForEvent(eventId);
 
     return {
       ...eventResp,
       attempts,
+      deliveries: deliveries.length > 0 ? deliveries : undefined,
     };
   }
 
-  async replayEvent(eventId: string, userId: string): Promise<ReplayEventResponse> {
+  async replayEvent(
+    eventId: string,
+    userId: string,
+    scope: 'failed' | 'all' = 'failed',
+  ): Promise<ReplayEventResponse> {
     const event = await this.eventRepo.findById(eventId);
     if (!event) {
       throw new AppError('Event not found', 404, 'NOT_FOUND');
+    }
+
+    // Phase 14 fan-out deliveries
+    const allDeliveries = await DeliveryModel.find({ eventId: event._id });
+    if (allDeliveries.length > 0) {
+      const targetDeliveries =
+        scope === 'all'
+          ? allDeliveries.filter((d) => d.status !== 'filtered')
+          : allDeliveries.filter((d) => d.status === 'failed' || d.status === 'dead');
+
+      const replayedDeliveryIds: string[] = [];
+      const queue = getDeliveryQueue();
+
+      for (const d of targetDeliveries) {
+        const n = d.attemptCount + 1;
+        const jobId = `${d._id.toString()}-r${n}`;
+
+        d.status = 'pending';
+        d.nextAttemptAt = new Date();
+        d.lastError = null;
+        await d.save();
+
+        try {
+          await queue.add(
+            'deliver',
+            { deliveryId: d._id.toString() },
+            {
+              jobId,
+              attempts: 1,
+              removeOnComplete: true,
+            },
+          );
+        } catch {
+          // Allow in offline / test environments
+        }
+
+        replayedDeliveryIds.push(d._id.toString());
+      }
+
+      await recomputeEventStatus(eventId);
+
+      await this.auditLogRepo.create({
+        workspaceId: event.workspaceId.toString(),
+        userId,
+        action: 'event.replay',
+        resourceType: 'event',
+        resourceId: event._id.toString(),
+        metadata: {
+          scope,
+          replayedDeliveryCount: replayedDeliveryIds.length,
+          replayedDeliveryIds,
+        },
+      });
+
+      return {
+        success: true,
+        eventId: event._id.toString(),
+        replayCount: (event.replayCount || 0) + 1,
+        jobId:
+          replayedDeliveryIds.length > 0
+            ? `${replayedDeliveryIds[0]}-r1`
+            : `${event._id.toString()}-r1`,
+      };
     }
 
     const previousStatus = event.status;

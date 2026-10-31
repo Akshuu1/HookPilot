@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Types } from 'mongoose';
+import mongoose, { Schema, model, type Document, type Types, type Model } from 'mongoose';
 import type { SignatureProvider, EndpointMode } from '@hookpilot/shared';
 
 export interface IEndpoint extends Document {
@@ -103,4 +103,5 @@ const endpointSchema = new Schema<IEndpoint>(
   },
 );
 
-export const EndpointModel = model<IEndpoint>('Endpoint', endpointSchema);
+export const EndpointModel =
+  (mongoose.models.Endpoint as Model<IEndpoint>) || model<IEndpoint>('Endpoint', endpointSchema);

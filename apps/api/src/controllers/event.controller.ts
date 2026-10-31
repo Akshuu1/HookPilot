@@ -42,7 +42,8 @@ export class EventController {
     try {
       const eventId = String(req.params.id);
       const userId = req.user!.id;
-      const result = await this.service.replayEvent(eventId, userId);
+      const scope = (req.body?.scope === 'all' ? 'all' : 'failed') as 'failed' | 'all';
+      const result = await this.service.replayEvent(eventId, userId, scope);
       res.status(200).json(result);
     } catch (err) {
       next(err);

@@ -2,6 +2,8 @@ import { Schema, model, type Document, type Types } from 'mongoose';
 
 export interface IDeliveryAttempt extends Document {
   eventId: Types.ObjectId;
+  deliveryId?: Types.ObjectId | null;
+  destinationId?: Types.ObjectId | null;
   attemptNumber: number;
   startedAt: Date;
   durationMs: number;
@@ -21,6 +23,16 @@ const deliveryAttemptSchema = new Schema<IDeliveryAttempt>(
       ref: 'Event',
       required: true,
       index: true,
+    },
+    deliveryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Delivery',
+      default: null,
+    },
+    destinationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Destination',
+      default: null,
     },
     attemptNumber: {
       type: Number,
@@ -65,6 +77,8 @@ const deliveryAttemptSchema = new Schema<IDeliveryAttempt>(
 );
 
 deliveryAttemptSchema.index({ eventId: 1, attemptNumber: 1 });
+deliveryAttemptSchema.index({ deliveryId: 1 });
+deliveryAttemptSchema.index({ destinationId: 1 });
 deliveryAttemptSchema.index({ startedAt: -1 });
 
 export const DeliveryAttemptModel = model<IDeliveryAttempt>(

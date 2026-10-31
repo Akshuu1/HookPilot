@@ -208,8 +208,28 @@ export function isMaskedPlaceholder(value?: string | null): boolean {
 // Phase 4: Ingest & Event Module
 // ==========================================
 
-export const EventStatuses = ['pending', 'delivering', 'delivered', 'failed', 'dead'] as const;
+export const EventStatuses = [
+  'pending',
+  'delivering',
+  'delivered',
+  'failed',
+  'dead',
+  'captured',
+  'filtered',
+  'partial',
+] as const;
 export type EventStatus = (typeof EventStatuses)[number];
+
+export const DeliveryStatuses = [
+  'pending',
+  'delivering',
+  'delivered',
+  'failed',
+  'dead',
+  'filtered',
+  'cancelled',
+] as const;
+export type DeliveryStatus = (typeof DeliveryStatuses)[number];
 
 export const IngestResponseSchema = z.object({
   eventId: z.string(),
@@ -246,6 +266,8 @@ export type EventResponse = z.infer<typeof EventResponseSchema>;
 export const DeliveryAttemptResponseSchema = z.object({
   id: z.string(),
   eventId: z.string(),
+  deliveryId: z.string().optional(),
+  destinationId: z.string().optional(),
   attemptNumber: z.number(),
   startedAt: z.string().datetime(),
   durationMs: z.number(),
@@ -260,17 +282,109 @@ export const DeliveryAttemptResponseSchema = z.object({
 export type DeliveryAttemptResponse = z.infer<typeof DeliveryAttemptResponseSchema>;
 
 export const EventPubSubMessageSchema = z.object({
-  type: z.enum(['event.created', 'event.status_changed', 'event.dead']),
+  type: z.enum([
+    'event.created',
+    'event.status_changed',
+    'event.dead',
+    'event.update',
+    'delivery.update',
+    'delivery.status_changed',
+  ]),
   eventId: z.string(),
-  endpointId: z.string(),
+  endpointId: z.string().optional(),
   workspaceId: z.string(),
-  status: z.enum(EventStatuses),
-  attemptCount: z.number(),
-  timestamp: z.string().datetime(),
+  status: z.string(),
+  attemptCount: z.number().optional(),
+  deliveryId: z.string().optional(),
+  destinationId: z.string().optional(),
+  timestamp: z.string().datetime().optional(),
   error: z.string().nullable().optional(),
 });
 
 export type EventPubSubMessage = z.infer<typeof EventPubSubMessageSchema>;
+
+// ==========================================
+// Phase 14: Fan-out Destinations & Deliveries
+// ==========================================
+
+export const CustomHeaderInputSchema = z.object({
+  name: z.string().min(1).trim(),
+  value: z.string().min(1),
+});
+export type CustomHeaderInput = z.infer<typeof CustomHeaderInputSchema>;
+
+export const CustomHeaderResponseSchema = z.object({
+  name: z.string(),
+  configured: z.boolean().default(true),
+});
+export type CustomHeaderResponse = z.infer<typeof CustomHeaderResponseSchema>;
+
+export const CreateDestinationInputSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(64).trim(),
+  url: z.string().url('Invalid destination URL').trim(),
+  customHeaders: z.array(CustomHeaderInputSchema).optional(),
+  isActive: z.boolean().default(true).optional(),
+  retryPolicy: RetryPolicySchema.optional(),
+  rateLimitPerMin: z.number().int().min(1).max(1000000).optional(),
+  filter: z.record(z.any()).nullable().optional(),
+  outboundSecret: z.string().optional(),
+});
+export type CreateDestinationInput = z.infer<typeof CreateDestinationInputSchema>;
+
+export const UpdateDestinationInputSchema = z.object({
+  name: z.string().min(1).max(64).trim().optional(),
+  url: z.string().url().trim().optional(),
+  customHeaders: z.array(CustomHeaderInputSchema).optional(),
+  isActive: z.boolean().optional(),
+  retryPolicy: RetryPolicySchema.optional(),
+  rateLimitPerMin: z.number().int().min(1).max(1000000).nullable().optional(),
+  filter: z.record(z.any()).nullable().optional(),
+  outboundSecret: z.string().optional(),
+});
+export type UpdateDestinationInput = z.infer<typeof UpdateDestinationInputSchema>;
+
+export const DestinationResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  endpointId: z.string(),
+  name: z.string(),
+  url: z.string(),
+  customHeaders: z.array(CustomHeaderResponseSchema),
+  isActive: z.boolean(),
+  retryPolicy: RetryPolicySchema.optional(),
+  rateLimitPerMin: z.number().nullable().optional(),
+  filter: z.any().nullable().optional(),
+  outboundSecretConfigured: z.boolean().default(false),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type DestinationResponse = z.infer<typeof DestinationResponseSchema>;
+
+export const DeliveryResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  eventId: z.string(),
+  destinationId: z.string(),
+  destinationName: z.string().optional(),
+  destinationUrl: z.string().optional(),
+  status: z.enum(DeliveryStatuses),
+  attemptCount: z.number(),
+  nextAttemptAt: z.string().datetime().nullable(),
+  lastError: z.string().nullable().optional(),
+  filterReason: z.string().nullable().optional(),
+  attempts: z.array(DeliveryAttemptResponseSchema).optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type DeliveryResponse = z.infer<typeof DeliveryResponseSchema>;
+
+export const ReplayEventScopeSchema = z.enum(['failed', 'all']).default('failed');
+export type ReplayEventScope = z.infer<typeof ReplayEventScopeSchema>;
+
+export const ReplayEventInputSchema = z.object({
+  scope: ReplayEventScopeSchema.optional(),
+});
+export type ReplayEventInput = z.infer<typeof ReplayEventInputSchema>;
 
 // ==========================================
 // Phase 6: Events API, Search & Replay
@@ -298,6 +412,7 @@ export type PaginatedEventsResponse = z.infer<typeof PaginatedEventsResponseSche
 
 export const EventWithAttemptsResponseSchema = EventResponseSchema.extend({
   attempts: z.array(DeliveryAttemptResponseSchema),
+  deliveries: z.array(DeliveryResponseSchema).optional(),
 });
 
 export type EventWithAttemptsResponse = z.infer<typeof EventWithAttemptsResponseSchema>;

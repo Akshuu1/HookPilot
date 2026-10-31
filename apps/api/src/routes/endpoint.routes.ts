@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { endpointController } from '../controllers/endpoint.controller.js';
 import { eventController } from '../controllers/event.controller.js';
+import { destinationController } from '../controllers/destination.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { requireEndpointRole } from '../middlewares/endpoint-role.middleware.js';
 
@@ -17,4 +18,12 @@ endpointRouter.post(
   '/:id/rotate-secret',
   requireEndpointRole('member'),
   endpointController.rotateSecret,
+);
+
+// Destinations under Endpoint
+endpointRouter.post('/:id/destinations', requireEndpointRole('member'), (req, res, next) =>
+  destinationController.create(req, res, next),
+);
+endpointRouter.get('/:id/destinations', requireEndpointRole('viewer'), (req, res, next) =>
+  destinationController.list(req, res, next),
 );

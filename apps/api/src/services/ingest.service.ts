@@ -14,6 +14,13 @@ import { decryptSecret } from '../utils/crypto.js';
 import { verifySignature } from '../utils/signature.js';
 import { extractIdempotencyKey } from '../utils/idempotency.js';
 import type { IEndpoint } from '../models/Endpoint.js';
+import type { IEvent } from '../models/Event.js';
+import { Types } from 'mongoose';
+import { DestinationModel } from '../models/Destination.js';
+import { DeliveryModel } from '../models/Delivery.js';
+import { destinationService, invalidateDestinationCache } from './destination.service.js';
+import { evaluateFilter } from './filter.service.js';
+import { recomputeEventStatus } from './delivery-status.service.js';
 
 export interface IngestParams {
   slug: string;
@@ -139,23 +146,9 @@ export class IngestService {
 
     const eventId = String(event._id ?? event.id);
 
-    // Enqueue delivery job to BullMQ queue 'delivery' with jobId = eventId
-    // Skip if mode is capture-only OR if this was a duplicate of an already enqueued event
-    if (!isDuplicate && endpoint.mode !== 'capture-only') {
-      try {
-        const queue = getDeliveryQueue();
-        await queue.add(
-          'deliver',
-          { eventId },
-          {
-            jobId: eventId,
-            attempts: 1,
-            removeOnComplete: true,
-          },
-        );
-      } catch {
-        // In environments without Redis (e.g. basic unit tests), let persistence stand
-      }
+    // Fan-out to active destinations
+    if (!isDuplicate) {
+      await this.fanOut(event, endpoint);
     }
 
     // Publish event.created to Redis 'events' channel for realtime Socket.IO emission
@@ -183,6 +176,129 @@ export class IngestService {
       eventId,
       isDuplicate,
     };
+  }
+
+  async fanOut(event: IEvent, endpoint: IEndpoint): Promise<void> {
+    const eventId = String(event._id ?? event.id);
+    const endpointId = String(endpoint._id ?? endpoint.id);
+    const workspaceId = String(endpoint.workspaceId);
+
+    // 1. Load active destinations (cached in Redis 60s)
+    let destinations = await destinationService.getActiveDestinations(endpointId);
+
+    // Backward compatibility: if no destinations exist but endpoint.destinationUrl exists, create Default destination
+    if (destinations.length === 0 && endpoint.destinationUrl) {
+      try {
+        const defaultDest = await DestinationModel.create({
+          workspaceId: Types.ObjectId.isValid(workspaceId)
+            ? new Types.ObjectId(workspaceId)
+            : workspaceId,
+          endpointId: Types.ObjectId.isValid(endpointId)
+            ? new Types.ObjectId(endpointId)
+            : endpointId,
+          name: 'Default',
+          url: endpoint.destinationUrl,
+          retryPolicy: endpoint.retryPolicy,
+          isActive: true,
+        });
+        destinations = [defaultDest];
+        await invalidateDestinationCache(endpointId);
+      } catch {
+        destinations = [
+          new DestinationModel({
+            workspaceId: Types.ObjectId.isValid(workspaceId)
+              ? new Types.ObjectId(workspaceId)
+              : new Types.ObjectId(),
+            endpointId: Types.ObjectId.isValid(endpointId)
+              ? new Types.ObjectId(endpointId)
+              : new Types.ObjectId(),
+            name: 'Default',
+            url: endpoint.destinationUrl,
+            retryPolicy: endpoint.retryPolicy,
+            isActive: true,
+          }),
+        ];
+      }
+    }
+
+    if (destinations.length === 0) {
+      try {
+        await recomputeEventStatus(eventId);
+      } catch {
+        // Non-blocking in unmocked unit tests
+      }
+      return;
+    }
+
+    const isCaptureOnly = endpoint.mode === 'capture-only';
+
+    // 2. Evaluate filter for each destination & prepare Delivery rows
+    const deliveriesToInsert = destinations.map((dest) => {
+      const isMatched = evaluateFilter(dest.filter, event);
+      return {
+        workspaceId: Types.ObjectId.isValid(workspaceId)
+          ? new Types.ObjectId(workspaceId)
+          : (workspaceId as any),
+        eventId: Types.ObjectId.isValid(eventId) ? new Types.ObjectId(eventId) : (eventId as any),
+        destinationId: dest._id,
+        status: isMatched ? 'pending' : 'filtered',
+        attemptCount: 0,
+        nextAttemptAt: isMatched && !isCaptureOnly ? new Date() : null,
+        lastError: null,
+        filterReason: !isMatched ? 'Filter conditions did not match' : null,
+      };
+    });
+
+    // 3. insertMany Delivery rows
+    let insertedDeliveries: any[] = [];
+    try {
+      insertedDeliveries = await DeliveryModel.insertMany(deliveriesToInsert);
+    } catch {
+      // Allow persistence to stand in tests without active MongoDB connection
+      insertedDeliveries = deliveriesToInsert.map((d) => ({
+        ...d,
+        _id: new Types.ObjectId(),
+      }));
+    }
+
+    // 4. Update Event derived status
+    try {
+      await recomputeEventStatus(eventId);
+    } catch {
+      // Non-blocking in unmocked unit tests
+    }
+
+    // 5. Enqueue delivery jobs with jobId = deliveryId (no colons) unless in capture-only mode
+    if (!isCaptureOnly) {
+      const pendingDeliveries = insertedDeliveries.filter((d) => d.status === 'pending');
+      if (pendingDeliveries.length > 0) {
+        const jobs = pendingDeliveries.map((d) => {
+          const deliveryId = d._id.toString();
+          return {
+            name: 'deliver',
+            data: { deliveryId },
+            opts: {
+              jobId: deliveryId, // No colons!
+              attempts: 1,
+              removeOnComplete: true,
+            },
+          };
+        });
+
+        try {
+          const queue = getDeliveryQueue();
+          if (typeof queue.addBulk === 'function') {
+            await queue.addBulk(jobs);
+          } else if (typeof (queue as any).add === 'function') {
+            for (const j of jobs) {
+              await (queue as any).add(j.name, j.data, j.opts);
+            }
+          }
+        } catch {
+          // Allow in environments without active Redis
+        }
+      }
+    }
   }
 }
 

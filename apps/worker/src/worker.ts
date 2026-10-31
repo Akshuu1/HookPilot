@@ -3,7 +3,8 @@ import { Redis } from 'ioredis';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { deliveryProcessor, type DeliveryJobData } from './processors/delivery.processor.js';
-import { closeRedisConnections } from './config/redis.js';
+import { reconcilerService } from './services/reconciler.service.js';
+import { closeRedisConnections, getDeliveryQueue } from './config/redis.js';
 
 export interface WorkerInstance {
   worker: Worker;
@@ -27,6 +28,10 @@ export function createDeliveryWorker(queueName = 'delivery'): WorkerInstance {
   const worker = new Worker<DeliveryJobData>(
     queueName,
     async (job: Job<DeliveryJobData>) => {
+      if (job.name === 'reconcile') {
+        logger.info('Running pending deliveries reconciler');
+        return reconcilerService.reconcile();
+      }
       logger.info({ jobId: job.id, name: job.name, data: job.data }, 'Processing delivery job');
       return deliveryProcessor(job);
     },
@@ -35,6 +40,24 @@ export function createDeliveryWorker(queueName = 'delivery'): WorkerInstance {
       concurrency: env.CONCURRENCY,
     },
   );
+
+  // Repeatable reconciler job every minute
+  try {
+    const queue = getDeliveryQueue();
+    queue
+      .add(
+        'reconcile',
+        {},
+        {
+          repeat: { pattern: '* * * * *' },
+          jobId: 'reconcile-pending-deliveries',
+          removeOnComplete: true,
+        },
+      )
+      .catch(() => {});
+  } catch {
+    // Non-blocking in offline / test environments
+  }
 
   worker.on('ready', () => {
     logger.info(`worker ready with concurrency ${env.CONCURRENCY}`);
