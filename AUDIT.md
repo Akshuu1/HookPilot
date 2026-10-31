@@ -198,3 +198,4 @@ A 30-second ramping concurrency load test was executed with **k6 v2.3.0** under 
 
 ### Regression Verdict
 **No performance regression.** Ingestion latency at the 95th percentile improved from **108.15 ms down to 99.02 ms**, remaining well below the 300 ms SLA threshold with a 0.00% error rate.
+
