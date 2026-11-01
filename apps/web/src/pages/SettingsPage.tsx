@@ -107,7 +107,39 @@ export function SettingsPage() {
       });
       setTimeout(() => setAccountError(null), 6000);
     }
+    setConnectingProvider(null);
   }, [searchParams, setSearchParams, queryClient]);
+
+  // Reset connectingProvider if user returns via bfcache (Back button) or window focus
+  useEffect(() => {
+    const handleReactivate = () => {
+      setConnectingProvider(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        setConnectingProvider(null);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pageshow', handleReactivate);
+      window.addEventListener('focus', handleReactivate);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('pageshow', handleReactivate);
+        window.removeEventListener('focus', handleReactivate);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, []);
 
   // Check if a linked identity is the user's only login method
   const githubIdentity = currentUser?.identities?.find((i) => i.provider === 'github');
@@ -123,6 +155,11 @@ export function SettingsPage() {
       const res = await authApi.linkStart(provider, '/settings');
       if (res?.url) {
         window.location.href = res.url;
+        setTimeout(() => {
+          setConnectingProvider(null);
+        }, 6000);
+      } else {
+        setConnectingProvider(null);
       }
     } catch (err: unknown) {
       setConnectingProvider(null);

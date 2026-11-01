@@ -54,7 +54,7 @@ export function LoginPage() {
     };
   }, []);
 
-  // Inspect query params for friendly OAuth error messages
+  // Inspect query params for friendly OAuth error messages and reset provider loading
   useEffect(() => {
     const queryError = searchParams.get('error');
     if (queryError) {
@@ -63,7 +63,40 @@ export function LoginPage() {
         setError(friendly);
       }
     }
+    // Always clear navigating state whenever searchParams changes (e.g. redirected with error)
+    setNavigatingProvider(null);
   }, [searchParams]);
+
+  // Reset navigatingProvider if user returns via bfcache (Back button) or window focus
+  useEffect(() => {
+    const handleReactivate = () => {
+      setNavigatingProvider(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        setNavigatingProvider(null);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pageshow', handleReactivate);
+      window.addEventListener('focus', handleReactivate);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('pageshow', handleReactivate);
+        window.removeEventListener('focus', handleReactivate);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+  }, []);
 
   // Determine safe intended redirect path
   const returnTo = sanitizeRelativePath(
@@ -79,6 +112,11 @@ export function LoginPage() {
     window.location.href = `${API_URL}/auth/oauth/${provider}/start?returnTo=${encodeURIComponent(
       returnTo,
     )}`;
+
+    // Fallback timer: if browser hasn't unloaded after 6s (e.g. cancelled before leave), re-enable
+    setTimeout(() => {
+      setNavigatingProvider(null);
+    }, 6000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
