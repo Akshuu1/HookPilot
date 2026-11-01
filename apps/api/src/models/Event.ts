@@ -84,8 +84,7 @@ const eventSchema = new Schema<IEvent>(
     },
     idempotencyKey: {
       type: String,
-      default: null,
-      index: true,
+      default: undefined,
     },
     status: {
       type: String,

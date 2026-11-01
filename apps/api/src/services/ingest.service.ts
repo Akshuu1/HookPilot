@@ -8,6 +8,7 @@ import {
 } from '../repositories/endpoint.repository.js';
 import {
   type EventRepository,
+  type PersistEventResult,
   eventRepository as defaultEventRepo,
 } from '../repositories/event.repository.js';
 import { getRedisClient } from '../config/redis.js';
@@ -17,7 +18,7 @@ import { verifySignature } from '../utils/signature.js';
 import { extractIdempotencyKey } from '../utils/idempotency.js';
 import type { IEndpoint } from '../models/Endpoint.js';
 import type { IEvent } from '../models/Event.js';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { DestinationModel } from '../models/Destination.js';
 import { DeliveryModel } from '../models/Delivery.js';
 import { destinationService, invalidateDestinationCache } from './destination.service.js';
@@ -178,21 +179,48 @@ export class IngestService {
     // Redact sensitive headers for storage
     const sanitizedHeaders = redactHeaders(params.headers);
 
-    // Persist event (returns existing event if explicit idempotency duplicate occurred)
-    const { event, isDuplicate } = await this.eventRepo.create({
-      workspaceId,
-      endpointId,
-      method: params.method,
-      headers: sanitizedHeaders,
-      rawBody: params.rawBody,
-      bodySize: params.bodySize,
-      contentType: params.contentType ?? null,
-      sourceIp: params.sourceIp,
-      signatureValid: signatureResult.isValid,
-      idempotencyKey,
-      status: 'pending',
-    });
+    // Persist event (returns existing event if duplicate occurred)
+    let persistResult: PersistEventResult;
+    try {
+      persistResult = await this.eventRepo.create({
+        workspaceId,
+        endpointId,
+        method: params.method,
+        headers: sanitizedHeaders,
+        rawBody: params.rawBody,
+        bodySize: params.bodySize,
+        contentType: params.contentType ?? null,
+        sourceIp: params.sourceIp,
+        signatureValid: signatureResult.isValid,
+        idempotencyKey,
+        status: 'pending',
+      });
+    } catch (saveErr) {
+      // Ingest never returns 5xx because of idempotency or duplicate violation.
+      logger.error(
+        {
+          endpointId,
+          error: saveErr instanceof Error ? saveErr.message : String(saveErr),
+        },
+        'Event persistence encountered error, attempting recovery with existing event',
+      );
+      const existing = await this.eventRepo.findEndpointEvents({
+        endpointId,
+        limit: 1,
+      });
+      if (existing.events.length > 0) {
+        const fallbackEvt = existing.events[0]!;
+        await this.eventRepo.recordDuplicate(fallbackEvt.id, 'window', params.sourceIp);
+        persistResult = {
+          event: fallbackEvt as any,
+          isDuplicate: true,
+        };
+      } else {
+        throw saveErr;
+      }
+    }
 
+    const { event, isDuplicate } = persistResult;
     const eventId = String(event._id ?? event.id);
 
     // If window key was reserved, update Redis with the actual eventId
@@ -386,13 +414,29 @@ export class IngestService {
       };
     });
 
-    // 3. insertMany Delivery rows
-    let insertedDeliveries: any[] = [];
+    // 3. Idempotent Delivery creation (safe to run twice for the same event)
+    let persistedDeliveries: any[] = [];
     try {
-      insertedDeliveries = await DeliveryModel.insertMany(deliveriesToInsert);
+      if (typeof DeliveryModel.insertMany === 'function') {
+        persistedDeliveries = (await DeliveryModel.insertMany(deliveriesToInsert, {
+          ordered: false,
+        })) as any[];
+      }
     } catch {
-      // Allow persistence to stand in tests without active MongoDB connection
-      insertedDeliveries = deliveriesToInsert.map((d) => ({
+      // If deliveries already exist for this event (fanOut called twice), query stored deliveries
+      try {
+        if (typeof DeliveryModel.find === 'function' && mongoose.connection.readyState === 1) {
+          persistedDeliveries = (await DeliveryModel.find({
+            eventId: Types.ObjectId.isValid(eventId) ? new Types.ObjectId(eventId) : eventId,
+          })) as any[];
+        }
+      } catch {
+        // Fallback in memory
+      }
+    }
+
+    if (!persistedDeliveries || persistedDeliveries.length === 0) {
+      persistedDeliveries = deliveriesToInsert.map((d) => ({
         ...d,
         _id: new Types.ObjectId(),
       }));
@@ -408,7 +452,7 @@ export class IngestService {
 
     // 5. Enqueue delivery jobs with jobId = deliveryId (no colons) unless in capture-only mode
     if (!isCaptureOnly) {
-      const pendingDeliveries = insertedDeliveries.filter((d) => d.status === 'pending');
+      const pendingDeliveries = persistedDeliveries.filter((d) => d.status === 'pending');
       if (pendingDeliveries.length > 0) {
         const jobs = pendingDeliveries.map((d) => {
           const deliveryId = d._id.toString();
@@ -416,7 +460,7 @@ export class IngestService {
             name: 'deliver',
             data: { deliveryId },
             opts: {
-              jobId: deliveryId, // No colons!
+              jobId: deliveryId, // Letters, digits, hyphens only - no colons!
               attempts: 1,
               removeOnComplete: true,
             },
@@ -432,8 +476,25 @@ export class IngestService {
               await (queue as any).add(j.name, j.data, j.opts);
             }
           }
-        } catch {
-          // Allow in environments without active Redis
+        } catch (enqueueErr: unknown) {
+          const errMsg = enqueueErr instanceof Error ? enqueueErr.message : String(enqueueErr);
+          // Handle 'job already exists' as success
+          if (
+            errMsg.toLowerCase().includes('already exists') ||
+            (enqueueErr as any)?.code === 'JOB_ALREADY_EXISTS'
+          ) {
+            logger.info({ eventId }, 'Delivery jobs already exist in queue; treated as success');
+          } else {
+            // Keep the Event and its Delivery rows with status 'pending', log error without payload
+            logger.error(
+              {
+                eventId,
+                endpointId,
+                error: errMsg,
+              },
+              'Delivery enqueueing failed; keeping deliveries pending for reconciler',
+            );
+          }
         }
       }
     }

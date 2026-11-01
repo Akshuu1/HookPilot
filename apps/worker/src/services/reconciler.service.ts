@@ -36,8 +36,16 @@ export class ReconcilerService {
           },
         );
         enqueuedCount++;
-      } catch (err) {
-        logger.error({ err, deliveryId }, 'Failed to reconcile orphaned delivery');
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (
+          errMsg.toLowerCase().includes('already exists') ||
+          (err as any)?.code === 'JOB_ALREADY_EXISTS'
+        ) {
+          enqueuedCount++;
+        } else {
+          logger.error({ err, deliveryId }, 'Failed to reconcile orphaned delivery');
+        }
       }
     }
 

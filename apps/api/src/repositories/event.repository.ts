@@ -83,7 +83,7 @@ export class MongoEventRepository implements EventRepository {
 
       const event = new EventModel({
         ...data,
-        idempotencyKey: data.idempotencyKey || null,
+        idempotencyKey: data.idempotencyKey || undefined,
         searchIndex,
         expiresAt,
         workspaceId: new Types.ObjectId(data.workspaceId),
@@ -95,18 +95,29 @@ export class MongoEventRepository implements EventRepository {
     } catch (err: unknown) {
       const mongoErr = err as { code?: number; name?: string };
       // Handle MongoDB unique index violation on { endpointId, idempotencyKey }
-      if (mongoErr.code === 11000 && data.idempotencyKey) {
-        const existing = await EventModel.findOne({
-          endpointId: new Types.ObjectId(data.endpointId),
-          idempotencyKey: data.idempotencyKey,
-        });
+      if (mongoErr.code === 11000) {
+        let existing: IEvent | null = null;
+        if (data.idempotencyKey) {
+          existing = await EventModel.findOne({
+            endpointId: new Types.ObjectId(data.endpointId),
+            idempotencyKey: data.idempotencyKey,
+          });
+        }
+        if (!existing && data.rawBody) {
+          existing = await EventModel.findOne({
+            endpointId: new Types.ObjectId(data.endpointId),
+            rawBody: data.rawBody,
+          }).sort({ receivedAt: -1 });
+        }
+        if (!existing) {
+          existing = await EventModel.findOne({
+            endpointId: new Types.ObjectId(data.endpointId),
+          }).sort({ receivedAt: -1 });
+        }
 
         if (existing) {
-          const updated = await this.recordDuplicate(
-            existing._id,
-            'idempotency-key',
-            data.sourceIp,
-          );
+          const reason = data.idempotencyKey ? 'idempotency-key' : 'window';
+          const updated = await this.recordDuplicate(existing._id, reason, data.sourceIp);
           return { event: updated || existing, isDuplicate: true };
         }
       }

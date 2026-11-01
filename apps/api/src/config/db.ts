@@ -29,6 +29,22 @@ export async function connectDatabase(): Promise<typeof mongoose> {
       serverSelectionTimeoutMS: 5000,
     });
     isConnected = true;
+
+    // Safely drop legacy index without partialFilterExpression to avoid null collision
+    try {
+      const eventColl = mongoose.connection.collection('events');
+      const indexes = await eventColl.indexes();
+      const legacyIdx = indexes.find((i) => i.name === 'endpointId_1_idempotencyKey_1');
+      if (legacyIdx && !legacyIdx.partialFilterExpression) {
+        logger.info(
+          'Dropping legacy unique index endpointId_1_idempotencyKey_1 without partial filter',
+        );
+        await eventColl.dropIndex('endpointId_1_idempotencyKey_1');
+      }
+    } catch {
+      // Non-blocking in unit tests or fresh databases
+    }
+
     return conn;
   } catch (err) {
     logger.error({ err }, 'Failed to connect to MongoDB');
