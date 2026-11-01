@@ -1,5 +1,6 @@
 import {
   decodeCursor,
+  type EventStatus,
   type EventFilterQuery,
   type PaginatedEventsResponse,
   type EventResponse,
@@ -31,24 +32,30 @@ export function toEventResponse(event: IEvent): EventResponse {
   const headersObj =
     event.headers instanceof Map ? Object.fromEntries(event.headers) : event.headers || {};
 
+  const receivedAtDate = event.receivedAt
+    ? new Date(event.receivedAt)
+    : (event as any).createdAt
+      ? new Date((event as any).createdAt)
+      : new Date();
+
   return {
     id: event._id ? event._id.toString() : event.id,
     workspaceId: event.workspaceId.toString(),
     endpointId: event.endpointId.toString(),
-    receivedAt: event.receivedAt.toISOString(),
-    method: event.method,
+    receivedAt: receivedAtDate.toISOString(),
+    method: event.method || 'POST',
     headers: headersObj,
-    rawBody: event.rawBody,
-    bodySize: event.bodySize,
+    rawBody: event.rawBody || '',
+    bodySize: event.bodySize ?? 0,
     contentType: event.contentType ?? null,
-    sourceIp: event.sourceIp,
-    signatureValid: event.signatureValid,
+    sourceIp: event.sourceIp || '',
+    signatureValid: event.signatureValid ?? false,
     idempotencyKey: event.idempotencyKey,
-    status: event.status,
-    attemptCount: event.attemptCount,
+    status: (event.status as EventStatus) || 'delivered',
+    attemptCount: event.attemptCount ?? 0,
     replayCount: event.replayCount || 0,
-    lastAttemptAt: event.lastAttemptAt ? event.lastAttemptAt.toISOString() : null,
-    nextAttemptAt: event.nextAttemptAt ? event.nextAttemptAt.toISOString() : null,
+    lastAttemptAt: event.lastAttemptAt ? new Date(event.lastAttemptAt).toISOString() : null,
+    nextAttemptAt: event.nextAttemptAt ? new Date(event.nextAttemptAt).toISOString() : null,
   };
 }
 

@@ -19,9 +19,32 @@ async function bootstrap(): Promise<void> {
     });
 
     // Initialize DB & Redis in background without blocking server listen
-    connectDatabase().catch((err) => {
-      logger.warn({ err }, 'MongoDB initial connection failed, will retry in background');
-    });
+    connectDatabase()
+      .then(async () => {
+        try {
+          const { EndpointModel } = await import('./models/Endpoint.js');
+          const { DestinationModel } = await import('./models/Destination.js');
+          const legacyEndpoints = await EndpointModel.find({
+            destinationUrl: { $exists: true, $ne: '' },
+          }).lean();
+          let unmigratedCount = 0;
+          for (const ep of legacyEndpoints) {
+            const destCount = await DestinationModel.countDocuments({ endpointId: ep._id });
+            if (destCount === 0) unmigratedCount++;
+          }
+          if (unmigratedCount > 0) {
+            logger.warn(
+              { unmigratedEndpoints: unmigratedCount },
+              "Un-migrated data detected: endpoints found without Destination records. Please run 'npm run migrate' to backfill.",
+            );
+          }
+        } catch {
+          // Non-blocking check
+        }
+      })
+      .catch((err) => {
+        logger.warn({ err }, 'MongoDB initial connection failed, will retry in background');
+      });
 
     try {
       const redis = getRedisClient();

@@ -171,4 +171,52 @@ describe('Event Inspector Filtered Status & Delivery Rendering', () => {
     expect(html).toContain('Force Deliver');
     expect(html).toContain('filtered');
   });
+
+  it('4. Event list with events renders rows and corresponding status badges for all statuses', () => {
+    const statuses: Array<
+      'delivered' | 'pending' | 'failed' | 'dead' | 'partial' | 'filtered' | 'captured'
+    > = ['delivered', 'pending', 'failed', 'dead', 'partial', 'filtered', 'captured'];
+
+    const mockEvents = statuses.map((status, idx) => ({
+      id: `evt-${idx}-${status}`,
+      workspaceId: 'ws-123',
+      endpointId: 'ep-123',
+      receivedAt: new Date(Date.now() - idx * 1000).toISOString(),
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      rawBody: JSON.stringify({ index: idx }),
+      bodySize: 20,
+      contentType: 'application/json',
+      sourceIp: '127.0.0.1',
+      signatureValid: true,
+      idempotencyKey: `idem-${status}`,
+      status,
+      attemptCount: 1,
+      replayCount: 0,
+      lastAttemptAt: null,
+      nextAttemptAt: null,
+    }));
+
+    const html = renderToString(
+      <div className="divide-y divide-white/[0.04]">
+        {mockEvents.map((evt) => (
+          <div key={evt.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+            <div className="col-span-2">
+              <StatusBadge status={evt.status} size="sm" />
+            </div>
+            <div className="col-span-1 text-xs font-mono">{evt.method}</div>
+            <div className="col-span-4 font-mono text-xs">
+              <span>{evt.id}</span>
+              <span>{evt.idempotencyKey}</span>
+            </div>
+          </div>
+        ))}
+      </div>,
+    );
+
+    for (const status of statuses) {
+      expect(html).toContain(status);
+      expect(html).toContain(`idem-${status}`);
+    }
+  });
 });

@@ -18,6 +18,7 @@
     "loadtest": "k6 run infra/loadtest/webhook-ramp.js",
     "seed": "npx tsx scripts/seed.ts",
     "migrate": "npx tsx scripts/migrate.ts",
+    "doctor": "npx tsx scripts/doctor.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

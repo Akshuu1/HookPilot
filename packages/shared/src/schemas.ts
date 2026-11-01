@@ -422,13 +422,19 @@ export type ReplayEventInput = z.infer<typeof ReplayEventInputSchema>;
 // ==========================================
 
 export const EventFilterQuerySchema = z.object({
-  status: z.enum(EventStatuses).optional(),
-  q: z.string().optional(),
-  from: z.string().optional(),
-  to: z.string().optional(),
-  signatureValid: z.union([z.boolean(), z.string().transform((val) => val === 'true')]).optional(),
+  status: z.preprocess(
+    (val) => (val === '' || val === 'all' || val === null ? undefined : val),
+    z.enum(EventStatuses).optional(),
+  ),
+  q: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  from: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  to: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  signatureValid: z.preprocess(
+    (val) => (val === '' || val === 'all' || val === null ? undefined : val),
+    z.union([z.boolean(), z.string().transform((val) => val === 'true')]).optional(),
+  ),
   limit: z.coerce.number().min(1).max(100).default(20),
-  cursor: z.string().optional(),
+  cursor: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
 });
 
 export type EventFilterQuery = z.infer<typeof EventFilterQuerySchema>;

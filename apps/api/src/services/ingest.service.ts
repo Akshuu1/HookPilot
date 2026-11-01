@@ -149,7 +149,18 @@ export class IngestService {
 
     // Fan-out to active destinations
     if (!isDuplicate) {
-      await this.fanOut(event, endpoint);
+      try {
+        await this.fanOut(event, endpoint);
+      } catch (fanOutErr) {
+        logger.error(
+          {
+            eventId,
+            endpointId,
+            error: fanOutErr instanceof Error ? fanOutErr.message : String(fanOutErr),
+          },
+          'Fan-out execution encountered an unexpected error; event was saved.',
+        );
+      }
     }
 
     // Publish event.created to Redis 'events' channel for realtime Socket.IO emission
@@ -190,19 +201,33 @@ export class IngestService {
     // Backward compatibility: if no destinations exist but endpoint.destinationUrl exists, create Default destination
     if (destinations.length === 0 && endpoint.destinationUrl) {
       try {
-        const defaultDest = await DestinationModel.create({
-          workspaceId: Types.ObjectId.isValid(workspaceId)
-            ? new Types.ObjectId(workspaceId)
-            : workspaceId,
+        const destQuery = {
           endpointId: Types.ObjectId.isValid(endpointId)
             ? new Types.ObjectId(endpointId)
             : endpointId,
           name: 'Default',
-          url: endpoint.destinationUrl,
-          retryPolicy: endpoint.retryPolicy,
-          isActive: true,
-        });
-        destinations = [defaultDest];
+        };
+        const defaultDest = await DestinationModel.findOneAndUpdate(
+          destQuery,
+          {
+            $setOnInsert: {
+              workspaceId: Types.ObjectId.isValid(workspaceId)
+                ? new Types.ObjectId(workspaceId)
+                : workspaceId,
+              endpointId: Types.ObjectId.isValid(endpointId)
+                ? new Types.ObjectId(endpointId)
+                : endpointId,
+              name: 'Default',
+              url: endpoint.destinationUrl,
+              retryPolicy: endpoint.retryPolicy,
+              isActive: true,
+            },
+          },
+          { upsert: true, new: true },
+        );
+        if (defaultDest) {
+          destinations = [defaultDest];
+        }
         await invalidateDestinationCache(endpointId);
       } catch {
         destinations = [
@@ -224,7 +249,8 @@ export class IngestService {
 
     if (destinations.length === 0) {
       try {
-        await recomputeEventStatus(eventId);
+        const derived = await recomputeEventStatus(eventId);
+        event.status = derived;
       } catch {
         // Non-blocking in unmocked unit tests
       }
