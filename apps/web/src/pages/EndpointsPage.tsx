@@ -82,14 +82,14 @@ export function EndpointsPage() {
   const [name, setName] = useState('');
   const [destinationUrl, setDestinationUrl] = useState('');
   const [mode, setMode] = useState<EndpointMode>('forward');
-  const [rateLimitPerMin, setRateLimitPerMin] = useState(60);
+  const [rateLimitPerMin, setRateLimitPerMin] = useState<number | ''>(60);
   const [provider, setProvider] = useState<SignatureProvider>('none');
   const [secret, setSecret] = useState('');
   const [headerName, setHeaderName] = useState('');
   const [enforceSignature, setEnforceSignature] = useState(false);
-  const [maxAttempts, setMaxAttempts] = useState(8);
-  const [baseDelayMs, setBaseDelayMs] = useState(1000);
-  const [maxDelayMs, setMaxDelayMs] = useState(3600000);
+  const [maxAttempts, setMaxAttempts] = useState<number | ''>(8);
+  const [baseDelayMs, setBaseDelayMs] = useState<number | ''>(1000);
+  const [maxDelayMs, setMaxDelayMs] = useState<number | ''>(3600000);
 
   // ----------------------------------------------------------------------
   // Destination Modals & State
@@ -103,16 +103,16 @@ export function EndpointsPage() {
   const [destName, setDestName] = useState('');
   const [destUrl, setDestUrl] = useState('');
   const [destIsActive, setDestIsActive] = useState(true);
-  const [destRateLimit, setDestRateLimit] = useState<number | null>(null);
+  const [destRateLimit, setDestRateLimit] = useState<number | '' | null>(null);
   const [destHeaders, setDestHeaders] = useState<
     Array<{ name: string; value: string; isMasked?: boolean }>
   >([]);
   const [destSecret, setDestSecret] = useState('');
   const [isReplacingDestSecret, setIsReplacingDestSecret] = useState(false);
   const [destOverrideRetry, setDestOverrideRetry] = useState(false);
-  const [destMaxAttempts, setDestMaxAttempts] = useState(5);
-  const [destBaseDelay, setDestBaseDelay] = useState(1000);
-  const [destMaxDelay, setDestMaxDelay] = useState(3600000);
+  const [destMaxAttempts, setDestMaxAttempts] = useState<number | ''>(5);
+  const [destBaseDelay, setDestBaseDelay] = useState<number | ''>(1000);
+  const [destMaxDelay, setDestMaxDelay] = useState<number | ''>(3600000);
   const [destFilter, setDestFilter] = useState<FilterRule | null>(null);
 
   // ----------------------------------------------------------------------
@@ -297,14 +297,38 @@ export function EndpointsPage() {
     setIsReplacingSecret(false);
   };
 
+  const isEndpointFormValid =
+    name.trim().length > 0 &&
+    destinationUrl.trim().length > 0 &&
+    rateLimitPerMin !== '' &&
+    rateLimitPerMin >= 1 &&
+    maxAttempts !== '' &&
+    maxAttempts >= 1 &&
+    maxAttempts <= 20 &&
+    baseDelayMs !== '' &&
+    baseDelayMs >= 100 &&
+    maxDelayMs !== '' &&
+    maxDelayMs >= 1000 &&
+    (provider === 'none' ||
+      (editingEndpoint && !isReplacingSecret && editingEndpoint.signatureConfig.secretConfigured) ||
+      secret.trim().length > 0) &&
+    (provider !== 'generic' || headerName.trim().length > 0);
+
   const handleEndpointSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEndpointFormValid) return;
+
+    const finalRateLimit = typeof rateLimitPerMin === 'number' ? rateLimitPerMin : 60;
+    const finalMaxAttempts = typeof maxAttempts === 'number' ? maxAttempts : 8;
+    const finalBaseDelay = typeof baseDelayMs === 'number' ? baseDelayMs : 1000;
+    const finalMaxDelay = typeof maxDelayMs === 'number' ? maxDelayMs : 3600000;
+
     const hasSecretToSubmit = (!editingEndpoint || isReplacingSecret) && secret.length > 0;
     const payload: CreateEndpointInput = {
       name: name.trim(),
       destinationUrl: destinationUrl.trim(),
       mode,
-      rateLimitPerMin,
+      rateLimitPerMin: finalRateLimit,
       signatureConfig: {
         provider,
         ...(hasSecretToSubmit ? { secret } : {}),
@@ -312,9 +336,9 @@ export function EndpointsPage() {
         enforce: enforceSignature,
       },
       retryPolicy: {
-        maxAttempts,
-        baseDelayMs,
-        maxDelayMs,
+        maxAttempts: finalMaxAttempts,
+        baseDelayMs: finalBaseDelay,
+        maxDelayMs: finalMaxDelay,
       },
     };
 
@@ -381,9 +405,22 @@ export function EndpointsPage() {
     setIsReplacingDestSecret(false);
   };
 
+  const isDestFormValid =
+    destName.trim().length > 0 &&
+    destUrl.trim().length > 0 &&
+    (!destOverrideRetry ||
+      (destMaxAttempts !== '' &&
+        destMaxAttempts >= 1 &&
+        destMaxAttempts <= 20 &&
+        destBaseDelay !== '' &&
+        destBaseDelay >= 100 &&
+        destMaxDelay !== '' &&
+        destMaxDelay >= 1000)) &&
+    (destRateLimit === null || destRateLimit === '' || destRateLimit >= 1);
+
   const handleDestinationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeEndpointId) return;
+    if (!activeEndpointId || !isDestFormValid) return;
 
     // Filter valid headers
     const validHeaders = destHeaders
@@ -392,18 +429,23 @@ export function EndpointsPage() {
 
     const retryPolicy = destOverrideRetry
       ? {
-          maxAttempts: destMaxAttempts,
-          baseDelayMs: destBaseDelay,
-          maxDelayMs: destMaxDelay,
+          maxAttempts: typeof destMaxAttempts === 'number' ? destMaxAttempts : 5,
+          baseDelayMs: typeof destBaseDelay === 'number' ? destBaseDelay : 1000,
+          maxDelayMs: typeof destMaxDelay === 'number' ? destMaxDelay : 3600000,
         }
       : undefined;
+
+    const finalDestRateLimit =
+      destRateLimit === '' || destRateLimit === null || destRateLimit === undefined
+        ? null
+        : Number(destRateLimit);
 
     if (editingDestination) {
       const updatePayload: UpdateDestinationInput = {
         name: destName.trim(),
         url: destUrl.trim(),
         isActive: destIsActive,
-        rateLimitPerMin: destRateLimit,
+        rateLimitPerMin: finalDestRateLimit,
         filter: destFilter,
         retryPolicy,
         ...(validHeaders.length > 0 ? { customHeaders: validHeaders } : {}),
@@ -417,7 +459,7 @@ export function EndpointsPage() {
         name: destName.trim(),
         url: destUrl.trim(),
         isActive: destIsActive,
-        rateLimitPerMin: destRateLimit ?? undefined,
+        rateLimitPerMin: finalDestRateLimit ?? undefined,
         filter: destFilter,
         retryPolicy,
         customHeaders: validHeaders.length > 0 ? validHeaders : undefined,
@@ -970,9 +1012,24 @@ export function EndpointsPage() {
                 min={1}
                 max={10000}
                 value={rateLimitPerMin}
-                onChange={(e) => setRateLimitPerMin(parseInt(e.target.value, 10) || 60)}
-                className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setRateLimitPerMin(val === '' ? '' : parseInt(val, 10));
+                }}
+                className={`w-full px-3 py-2 rounded-xl border bg-zinc-950 text-zinc-100 text-sm focus:outline-none transition-colors ${
+                  rateLimitPerMin !== '' && rateLimitPerMin < 1
+                    ? 'border-rose-500/80 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-white/30'
+                }`}
               />
+              {rateLimitPerMin === 0 && (
+                <p className="text-[11px] text-rose-400 mt-1">
+                  Rate limit cannot be 0 (minimum 1 req/min).
+                </p>
+              )}
+              {rateLimitPerMin === '' && (
+                <p className="text-[11px] text-amber-400/90 mt-1">Please enter a rate limit.</p>
+              )}
             </div>
           </div>
 
@@ -1108,10 +1165,32 @@ export function EndpointsPage() {
                   min={1}
                   max={20}
                   value={maxAttempts}
-                  onChange={(e) => setMaxAttempts(parseInt(e.target.value, 10) || 1)}
-                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMaxAttempts(val === '' ? '' : parseInt(val, 10));
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl border bg-zinc-950 text-zinc-100 text-sm focus:outline-none font-mono transition-colors ${
+                    maxAttempts !== '' && (maxAttempts < 1 || maxAttempts > 20)
+                      ? 'border-rose-500/80 focus:border-rose-500'
+                      : 'border-white/[0.08] focus:border-white/30'
+                  }`}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">1 to 20 attempts (default: 8)</p>
+                {maxAttempts === 0 && (
+                  <p className="text-[11px] text-rose-400 mt-1">
+                    Max attempts cannot be 0 (minimum 1).
+                  </p>
+                )}
+                {maxAttempts !== '' && maxAttempts > 20 && (
+                  <p className="text-[11px] text-rose-400 mt-1">Maximum allowed attempts is 20.</p>
+                )}
+                {maxAttempts === '' && (
+                  <p className="text-[11px] text-amber-400/90 mt-1">
+                    Please enter number of attempts.
+                  </p>
+                )}
+                {maxAttempts !== '' && maxAttempts >= 1 && maxAttempts <= 20 && (
+                  <p className="text-[10px] text-zinc-500 mt-1">1 to 20 attempts (default: 8)</p>
+                )}
               </div>
 
               <div>
@@ -1124,10 +1203,32 @@ export function EndpointsPage() {
                   max={60000}
                   step={100}
                   value={baseDelayMs}
-                  onChange={(e) => setBaseDelayMs(parseInt(e.target.value, 10) || 1000)}
-                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBaseDelayMs(val === '' ? '' : parseInt(val, 10));
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl border bg-zinc-950 text-zinc-100 text-sm focus:outline-none font-mono transition-colors ${
+                    baseDelayMs !== '' && baseDelayMs < 100
+                      ? 'border-rose-500/80 focus:border-rose-500'
+                      : 'border-white/[0.08] focus:border-white/30'
+                  }`}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">Initial backoff (default: 1000ms)</p>
+                {baseDelayMs === 0 && (
+                  <p className="text-[11px] text-rose-400 mt-1">
+                    Base delay cannot be 0 (minimum 100ms).
+                  </p>
+                )}
+                {baseDelayMs !== '' && baseDelayMs > 0 && baseDelayMs < 100 && (
+                  <p className="text-[11px] text-rose-400 mt-1">Minimum base delay is 100ms.</p>
+                )}
+                {baseDelayMs === '' && (
+                  <p className="text-[11px] text-amber-400/90 mt-1">Please enter initial delay.</p>
+                )}
+                {baseDelayMs !== '' && baseDelayMs >= 100 && (
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Initial backoff (default: 1000ms)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1140,10 +1241,32 @@ export function EndpointsPage() {
                   max={86400000}
                   step={1000}
                   value={maxDelayMs}
-                  onChange={(e) => setMaxDelayMs(parseInt(e.target.value, 10) || 3600000)}
-                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMaxDelayMs(val === '' ? '' : parseInt(val, 10));
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl border bg-zinc-950 text-zinc-100 text-sm focus:outline-none font-mono transition-colors ${
+                    maxDelayMs !== '' && maxDelayMs < 1000
+                      ? 'border-rose-500/80 focus:border-rose-500'
+                      : 'border-white/[0.08] focus:border-white/30'
+                  }`}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">Max backoff cap (default: 1h)</p>
+                {maxDelayMs === 0 && (
+                  <p className="text-[11px] text-rose-400 mt-1">
+                    Max delay cannot be 0 (minimum 1000ms).
+                  </p>
+                )}
+                {maxDelayMs !== '' && maxDelayMs > 0 && maxDelayMs < 1000 && (
+                  <p className="text-[11px] text-rose-400 mt-1">
+                    Minimum max delay is 1000ms (1s).
+                  </p>
+                )}
+                {maxDelayMs === '' && (
+                  <p className="text-[11px] text-amber-400/90 mt-1">Please enter max backoff.</p>
+                )}
+                {maxDelayMs !== '' && maxDelayMs >= 1000 && (
+                  <p className="text-[10px] text-zinc-500 mt-1">Max backoff cap (default: 1h)</p>
+                )}
               </div>
             </div>
           </div>
@@ -1158,7 +1281,9 @@ export function EndpointsPage() {
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending || !name.trim()}
+              disabled={
+                createMutation.isPending || updateMutation.isPending || !isEndpointFormValid
+              }
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {createMutation.isPending || updateMutation.isPending
@@ -1250,12 +1375,22 @@ export function EndpointsPage() {
                 min={1}
                 max={100000}
                 value={destRateLimit ?? ''}
-                onChange={(e) =>
-                  setDestRateLimit(e.target.value ? parseInt(e.target.value, 10) : null)
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDestRateLimit(val === '' ? '' : parseInt(val, 10));
+                }}
                 placeholder="Inherit from endpoint default"
-                className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-xs focus:outline-none focus:border-white/30"
+                className={`w-full px-3 py-2 rounded-xl border bg-zinc-950 text-zinc-100 text-xs focus:outline-none transition-colors ${
+                  destRateLimit !== null && destRateLimit !== '' && destRateLimit < 1
+                    ? 'border-rose-500/80 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-white/30'
+                }`}
               />
+              {destRateLimit === 0 && (
+                <p className="text-[11px] text-rose-400 mt-1">
+                  Rate limit cannot be 0 (minimum 1 req/min).
+                </p>
+              )}
             </div>
           </div>
 
@@ -1372,9 +1507,22 @@ export function EndpointsPage() {
                     min={1}
                     max={20}
                     value={destMaxAttempts}
-                    onChange={(e) => setDestMaxAttempts(parseInt(e.target.value, 10) || 5)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-900 text-zinc-100"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDestMaxAttempts(val === '' ? '' : parseInt(val, 10));
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg border bg-zinc-900 text-zinc-100 ${
+                      destMaxAttempts !== '' && (destMaxAttempts < 1 || destMaxAttempts > 20)
+                        ? 'border-rose-500/80'
+                        : 'border-white/[0.08]'
+                    }`}
                   />
+                  {destMaxAttempts === 0 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Cannot be 0</p>
+                  )}
+                  {destMaxAttempts !== '' && destMaxAttempts > 20 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Max 20</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-zinc-400 mb-1">Base Delay (ms)</label>
@@ -1382,9 +1530,22 @@ export function EndpointsPage() {
                     type="number"
                     min={100}
                     value={destBaseDelay}
-                    onChange={(e) => setDestBaseDelay(parseInt(e.target.value, 10) || 1000)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-900 text-zinc-100"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDestBaseDelay(val === '' ? '' : parseInt(val, 10));
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg border bg-zinc-900 text-zinc-100 ${
+                      destBaseDelay !== '' && destBaseDelay < 100
+                        ? 'border-rose-500/80'
+                        : 'border-white/[0.08]'
+                    }`}
                   />
+                  {destBaseDelay === 0 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Cannot be 0</p>
+                  )}
+                  {destBaseDelay !== '' && destBaseDelay > 0 && destBaseDelay < 100 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Min 100ms</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-zinc-400 mb-1">Max Delay (ms)</label>
@@ -1392,9 +1553,22 @@ export function EndpointsPage() {
                     type="number"
                     min={1000}
                     value={destMaxDelay}
-                    onChange={(e) => setDestMaxDelay(parseInt(e.target.value, 10) || 3600000)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-zinc-900 text-zinc-100"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDestMaxDelay(val === '' ? '' : parseInt(val, 10));
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg border bg-zinc-900 text-zinc-100 ${
+                      destMaxDelay !== '' && destMaxDelay < 1000
+                        ? 'border-rose-500/80'
+                        : 'border-white/[0.08]'
+                    }`}
                   />
+                  {destMaxDelay === 0 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Cannot be 0</p>
+                  )}
+                  {destMaxDelay !== '' && destMaxDelay > 0 && destMaxDelay < 1000 && (
+                    <p className="text-[10px] text-rose-400 mt-1">Min 1000ms</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1423,7 +1597,7 @@ export function EndpointsPage() {
             <button
               type="submit"
               disabled={
-                createDestMutation.isPending || updateDestMutation.isPending || !destName.trim()
+                createDestMutation.isPending || updateDestMutation.isPending || !isDestFormValid
               }
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
             >
