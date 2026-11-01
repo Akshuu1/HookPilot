@@ -94,7 +94,7 @@ beforeAll(async () => {
 afterAll(async () => {
   delete process.env.ALLOW_LOCAL_DESTINATION;
   await mongoose.disconnect();
-  await mongoServer.stop();
+  await mongoServer?.stop();
 });
 
 beforeEach(async () => {

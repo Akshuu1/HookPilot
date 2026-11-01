@@ -1036,14 +1036,34 @@ export function EndpointsPage() {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                      Signing Secret
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-zinc-400">
+                        {editingEndpoint && editingEndpoint.signatureConfig.secretConfigured
+                          ? 'New Signing Secret'
+                          : 'Signing Secret'}
+                      </label>
+                      {editingEndpoint && editingEndpoint.signatureConfig.secretConfigured && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsReplacingSecret(false);
+                            setSecret('');
+                          }}
+                          className="text-[11px] text-zinc-400 hover:text-white"
+                        >
+                          Keep existing
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="password"
                       value={secret}
                       onChange={(e) => setSecret(e.target.value)}
-                      placeholder="Enter provider webhook secret..."
+                      placeholder={
+                        editingEndpoint && editingEndpoint.signatureConfig.secretConfigured
+                          ? 'Enter new secret...'
+                          : 'Enter provider webhook secret...'
+                      }
                       className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono text-xs"
                     />
                   </div>
@@ -1060,6 +1080,72 @@ export function EndpointsPage() {
                 </label>
               </div>
             )}
+          </div>
+
+          {/* Retry Policy */}
+          <div className="pt-2 border-t border-white/[0.08] space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                  Exponential Backoff & Retry Policy
+                </h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Automated retry schedule with jitter and Dead-Letter Queue (DLQ) protection.
+                </p>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                DLQ Enabled
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  Max Attempts
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={maxAttempts}
+                  onChange={(e) => setMaxAttempts(parseInt(e.target.value, 10) || 1)}
+                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">1 to 20 attempts (default: 8)</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  Base Delay (ms)
+                </label>
+                <input
+                  type="number"
+                  min={100}
+                  max={60000}
+                  step={100}
+                  value={baseDelayMs}
+                  onChange={(e) => setBaseDelayMs(parseInt(e.target.value, 10) || 1000)}
+                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">Initial backoff (default: 1000ms)</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  Max Delay (ms)
+                </label>
+                <input
+                  type="number"
+                  min={1000}
+                  max={86400000}
+                  step={1000}
+                  value={maxDelayMs}
+                  onChange={(e) => setMaxDelayMs(parseInt(e.target.value, 10) || 3600000)}
+                  className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 font-mono"
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">Max backoff cap (default: 1h)</p>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.08]">

@@ -292,22 +292,24 @@ describe('Phase 9: API Keys and CLI Tunnel Integration Tests', () => {
       });
     });
 
-    // Worker simulates dispatching a request over Redis
+    // Worker simulates dispatching a request over Redis (with retry interval in case Redis sub was connecting)
     const testEventId = new mongoose.Types.ObjectId().toString();
-    await redisPublisher.publish(
-      'tunnel:requests',
-      JSON.stringify({
-        eventId: testEventId,
-        endpointId: endpoint._id.toString(),
-        endpointSlug: endpoint.slug,
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        rawBody: '{"hello":"world"}',
-        timeoutMs: 5000,
-      }),
-    );
+    const publishPayload = JSON.stringify({
+      eventId: testEventId,
+      endpointId: endpoint._id.toString(),
+      endpointSlug: endpoint.slug,
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      rawBody: '{"hello":"world"}',
+      timeoutMs: 5000,
+    });
 
-    const receivedEvent = await eventReceivedPromise;
+    await redisPublisher.publish('tunnel:requests', publishPayload);
+    const publishTimer = setInterval(() => {
+      void redisPublisher.publish('tunnel:requests', publishPayload);
+    }, 250);
+
+    const receivedEvent = await eventReceivedPromise.finally(() => clearInterval(publishTimer));
     expect(receivedEvent.eventId).toBe(testEventId);
     expect(receivedEvent.rawBody).toBe('{"hello":"world"}');
 
