@@ -42,7 +42,17 @@ export class DefaultHealthRepository implements HealthRepository {
     const start = Date.now();
     try {
       const client = getRedisClient();
-      const response = await client.ping();
+      if (client.status !== 'ready') {
+        return {
+          status: 'down',
+          error: `Redis client status is ${client.status}`,
+        };
+      }
+      const pingPromise = client.ping();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Redis ping timed out after 2000ms')), 2000),
+      );
+      const response = await Promise.race([pingPromise, timeoutPromise]);
       if (response === 'PONG') {
         return {
           status: 'up',

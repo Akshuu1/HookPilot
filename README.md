@@ -211,6 +211,44 @@ Load testing was performed using **k6** (`infra/loadtest/webhook-ramp.js`) rampi
 
 ---
 
+## ⚙️ Environment Variables
+
+The table below lists every environment variable supported across the API and Worker services. Core variables are required in production (`NODE_ENV=production`), while feature-specific variables are fully optional. If an optional variable is omitted, the corresponding feature is disabled safely at startup without crashing the service.
+
+| Variable Name | Required / Optional | Service | Description |
+| :--- | :---: | :---: | :--- |
+| `MONGODB_URI` | **Required** (Prod) | API & Worker | MongoDB connection URI (e.g. `mongodb+srv://...` or `mongodb://localhost:27017/hookpilot`) |
+| `REDIS_URL` | **Required** (Prod) | API & Worker | Redis connection URI for BullMQ queues, pub/sub, and rate limiting |
+| `JWT_ACCESS_SECRET` / `JWT_SECRET` | **Required** (Prod) | API | Cryptographic secret for signing and verifying JWT access tokens (minimum 32 characters) |
+| `ENCRYPTION_KEY` | **Required** (Prod) | API & Worker | 32-byte hexadecimal key (64 hex characters) for AES-256-GCM encryption of secrets |
+| `PORT` | Optional (Default: `4000`) | API | Listening port for the API server (automatically assigned on Render / Cloud hosts) |
+| `NODE_ENV` | Optional (Default: `development`) | API & Worker | Environment mode: `production`, `development`, or `test` |
+| `LOG_LEVEL` | Optional (Default: `info`) | API & Worker | Pino log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, or `silent` |
+| `CORS_ORIGIN` | Optional (Default: `http://localhost:5173`) | API | Comma-separated list of allowed CORS origins for browser web client |
+| `COOKIE_SECRET` | Optional | API | Cookie signing secret for session tokens |
+| `COOKIE_SAME_SITE` | Optional (Default: `lax`) | API | SameSite cookie attribute (`lax`, `strict`, or `none` for cross-site deployments) |
+| `JWT_REFRESH_SECRET` | Optional | API | Cryptographic secret for signing long-lived refresh tokens |
+| `JWT_ACCESS_EXPIRES_IN`| Optional (Default: `15m`) | API | Expiration duration for access tokens |
+| `JWT_REFRESH_EXPIRES_IN`| Optional (Default: `7d`) | API | Expiration duration for refresh tokens |
+| `API_PUBLIC_URL` | Optional (Default: `http://localhost:4000`) | API | Public-facing base URL of the API, used for OAuth callback redirection |
+| `FRONTEND_URL` | Optional (Default: `http://localhost:5173`) | API | Public-facing URL of the frontend web application |
+| `DASHBOARD_URL` | Optional (Default: `http://localhost:5173`) | API & Worker | URL linked in alert notifications |
+| `GITHUB_CLIENT_ID` | Optional (Feature: GitHub OAuth) | API | GitHub OAuth application Client ID. Disabled if omitted. |
+| `GITHUB_CLIENT_SECRET` | Optional (Feature: GitHub OAuth) | API | GitHub OAuth application Client Secret. Disabled if omitted. |
+| `GOOGLE_CLIENT_ID` | Optional (Feature: Google OAuth) | API | Google OAuth 2.0 Client ID. Disabled if omitted. |
+| `GOOGLE_CLIENT_SECRET` | Optional (Feature: Google OAuth) | API | Google OAuth 2.0 Client Secret. Disabled if omitted. |
+| `SMTP_HOST` | Optional (Feature: Email Alerts) | API & Worker | SMTP server hostname for email alert notifications. Disabled if omitted. |
+| `SMTP_PORT` | Optional (Default: `1025`) | API & Worker | SMTP server port (e.g. `587`, `465`, or `1025`) |
+| `SMTP_USER` | Optional | API & Worker | SMTP authentication username |
+| `SMTP_PASS` | Optional | API & Worker | SMTP authentication password |
+| `ALERT_FROM` | Optional (Default: `alerts@hookpilot.dev`) | API & Worker | `From:` email address used for alert notifications |
+| `SLACK_WEBHOOK_URL` | Optional (Feature: Slack Alerts) | API & Worker | Default Slack incoming webhook URL. Disabled if omitted. |
+| `WORKER_CONCURRENCY` / `CONCURRENCY` | Optional (Default: `10`) | Worker | Number of concurrent webhook delivery jobs processed by the worker |
+| `WORKER_HEALTH_PORT` | Optional | Worker | Optional HTTP port for worker health checks |
+| `ALLOW_LOCAL_DESTINATION` | Optional (Default: `false`) | Worker | If `true`, permits delivery to RFC 1918 private/loopback IPs (testing only) |
+
+---
+
 ## 📚 Deep Documentation & Architecture Decisions
 
 * [Architecture Guide (`docs/architecture.md`)](docs/architecture.md): Deep-dive into stream capture, BullMQ deterministic deduplication, distributed circuit breaking, and telemetry.

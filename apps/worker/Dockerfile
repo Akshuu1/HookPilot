@@ -4,7 +4,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy root configurations
-COPY package.json tsconfig.base.json ./
+COPY package.json package-lock.json* tsconfig.base.json ./
 
 # Copy shared package
 COPY packages/shared/package.json ./packages/shared/

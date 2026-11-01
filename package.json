@@ -17,6 +17,7 @@
     "e2e": "playwright test",
     "loadtest": "k6 run infra/loadtest/webhook-ramp.js",
     "seed": "npx tsx scripts/seed.ts",
+    "migrate": "npx tsx scripts/migrate.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

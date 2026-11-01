@@ -36,11 +36,12 @@ export class AlertTransportService {
 
   private getMailTransporter(): Transporter {
     if (!this.mailTransporter) {
+      const host = env.SMTP_HOST || 'localhost';
       const auth =
         env.SMTP_USER && env.SMTP_PASS ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined;
 
       this.mailTransporter = nodemailer.createTransport({
-        host: env.SMTP_HOST,
+        host,
         port: env.SMTP_PORT,
         secure: env.SMTP_PORT === 465,
         auth,

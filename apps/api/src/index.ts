@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { app } from './app.js';
-import { env } from './config/env.js';
+import { env, logFeatureStatus } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { getRedisClient, disconnectRedis } from './config/redis.js';
@@ -8,22 +8,29 @@ import { createSocketServer } from './services/socket.service.js';
 
 async function bootstrap(): Promise<void> {
   try {
-    // Initialize DB & Redis
-    await connectDatabase().catch((err) => {
-      logger.warn({ err }, 'MongoDB initial connection failed, will retry in background');
-    });
-
-    const redis = getRedisClient();
-    redis.ping().catch((err) => {
-      logger.warn({ err }, 'Redis initial ping failed, will retry in background');
-    });
-
+    const port = Number(process.env.PORT) || env.PORT;
     const server = createServer(app);
     const io = createSocketServer(server);
 
-    server.listen(env.PORT, () => {
-      logger.info({ port: env.PORT, env: env.NODE_ENV }, 'HookPilot API listening');
+    // Bind HTTP server immediately to 0.0.0.0 and port so /health is reachable instantly
+    server.listen(port, '0.0.0.0', () => {
+      logger.info({ port, env: env.NODE_ENV, host: '0.0.0.0' }, 'HookPilot API listening');
+      logFeatureStatus(logger);
     });
+
+    // Initialize DB & Redis in background without blocking server listen
+    connectDatabase().catch((err) => {
+      logger.warn({ err }, 'MongoDB initial connection failed, will retry in background');
+    });
+
+    try {
+      const redis = getRedisClient();
+      redis.ping().catch((err) => {
+        logger.warn({ err }, 'Redis initial ping failed, will retry in background');
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Redis client initialization failed, will retry in background');
+    }
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

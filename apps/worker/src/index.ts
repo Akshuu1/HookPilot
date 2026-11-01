@@ -2,21 +2,26 @@ import http from 'node:http';
 import { createDeliveryWorker } from './worker.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { logger } from './config/logger.js';
+import { logWorkerFeatureStatus } from './config/env.js';
 
 async function bootstrap(): Promise<void> {
   try {
-    await connectDatabase();
-    const { close } = createDeliveryWorker();
+    logWorkerFeatureStatus(logger);
 
     let healthServer: http.Server | null = null;
     if (process.env.WORKER_HEALTH_PORT) {
+      const port = Number(process.env.WORKER_HEALTH_PORT);
       healthServer = http.createServer((_req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok', worker: 'running' }));
       });
-      healthServer.listen(Number(process.env.WORKER_HEALTH_PORT));
-      logger.info({ port: process.env.WORKER_HEALTH_PORT }, 'Worker health server listening');
+      healthServer.listen(port, '0.0.0.0', () => {
+        logger.info({ port, host: '0.0.0.0' }, 'Worker health server listening');
+      });
     }
+
+    await connectDatabase();
+    const { close } = createDeliveryWorker();
 
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Shutdown signal received in worker, closing gracefully...');
