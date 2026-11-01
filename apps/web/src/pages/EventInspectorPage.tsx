@@ -150,6 +150,11 @@ export function EventInspectorPage() {
           (oldData: InfiniteData<PaginatedEventsResponse> | undefined) => {
             if (!oldData || !oldData.pages || oldData.pages.length === 0) return oldData;
 
+            // Only prepend if statusFilter is 'all' or matches this event's status
+            if (statusFilter !== 'all' && msg.status !== statusFilter) {
+              return oldData;
+            }
+
             // Synthesize new event row
             const newEvent: EventResponse = {
               id: msg.eventId,
@@ -806,14 +811,14 @@ export function EventInspectorPage() {
                       </div>
 
                       {/* Filter Reason (if filtered or exists) */}
-                      {del.filterReason && (
+                      {(del.filterReason || del.status === 'filtered') && (
                         <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 flex items-start gap-2 font-mono">
                           <Filter className="h-3.5 w-3.5 text-purple-400 mt-0.5 shrink-0" />
                           <div>
                             <span className="font-semibold block text-[11px] uppercase tracking-wider text-purple-400">
                               Filter Reason
                             </span>
-                            <span>{del.filterReason}</span>
+                            <span>{del.filterReason || 'Filter conditions did not match'}</span>
                           </div>
                         </div>
                       )}

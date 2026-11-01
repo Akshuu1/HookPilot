@@ -250,34 +250,38 @@ export function extractFieldValue(field: string, parsedBody: unknown, input: Fil
     const pathStr = field.slice('body.'.length);
     if (!pathStr) return undefined;
 
-    const parts = pathStr.split('.');
-    let current: unknown = parsedBody;
+    try {
+      const parts = pathStr.split('.');
+      let current: unknown = parsedBody;
 
-    for (const part of parts) {
-      if (current == null || typeof current !== 'object') {
-        return undefined;
-      }
+      for (const part of parts) {
+        if (current == null || typeof current !== 'object') {
+          return undefined;
+        }
 
-      if (FORBIDDEN_TOKENS.has(part)) {
-        return undefined;
-      }
+        if (FORBIDDEN_TOKENS.has(part)) {
+          return undefined;
+        }
 
-      if (Array.isArray(current)) {
-        const idx = Number(part);
-        if (Number.isInteger(idx) && idx >= 0 && idx < current.length) {
-          current = current[idx];
+        if (Array.isArray(current)) {
+          const idx = Number(part);
+          if (Number.isInteger(idx) && idx >= 0 && idx < current.length) {
+            current = current[idx];
+          } else {
+            return undefined;
+          }
         } else {
-          return undefined;
+          if (!Object.prototype.hasOwnProperty.call(current, part)) {
+            return undefined;
+          }
+          current = (current as Record<string, unknown>)[part];
         }
-      } else {
-        if (!Object.prototype.hasOwnProperty.call(current, part)) {
-          return undefined;
-        }
-        current = (current as Record<string, unknown>)[part];
       }
-    }
 
-    return current;
+      return current;
+    } catch {
+      return undefined;
+    }
   }
 
   return undefined;
@@ -290,62 +294,66 @@ export function extractFieldValue(field: string, parsedBody: unknown, input: Fil
  * - No implicit type coercion ('5' is not 5).
  */
 export function evaluateCondition(actual: unknown, op: FilterOperator, expected: unknown): boolean {
-  if (actual === undefined) {
-    return op === 'notExists';
-  }
+  try {
+    if (actual === undefined) {
+      return op === 'notExists';
+    }
 
-  switch (op) {
-    case 'exists':
-      return true;
+    switch (op) {
+      case 'exists':
+        return true;
 
-    case 'notExists':
-      return false;
+      case 'notExists':
+        return false;
 
-    case 'eq':
-      return actual === expected;
+      case 'eq':
+        return actual === expected;
 
-    case 'neq':
-      return actual !== expected;
+      case 'neq':
+        return actual !== expected;
 
-    case 'in':
-      return Array.isArray(expected) && expected.includes(actual);
+      case 'in':
+        return Array.isArray(expected) && expected.includes(actual);
 
-    case 'nin':
-      return Array.isArray(expected) && !expected.includes(actual);
+      case 'nin':
+        return Array.isArray(expected) && !expected.includes(actual);
 
-    case 'contains':
-      if (typeof actual === 'string' && typeof expected === 'string') {
-        return actual.includes(expected);
-      }
-      if (Array.isArray(actual)) {
-        return actual.includes(expected);
-      }
-      return false;
+      case 'contains':
+        if (typeof actual === 'string' && typeof expected === 'string') {
+          return actual.includes(expected);
+        }
+        if (Array.isArray(actual)) {
+          return actual.includes(expected);
+        }
+        return false;
 
-    case 'startsWith':
-      return (
-        typeof actual === 'string' && typeof expected === 'string' && actual.startsWith(expected)
-      );
+      case 'startsWith':
+        return (
+          typeof actual === 'string' && typeof expected === 'string' && actual.startsWith(expected)
+        );
 
-    case 'endsWith':
-      return (
-        typeof actual === 'string' && typeof expected === 'string' && actual.endsWith(expected)
-      );
+      case 'endsWith':
+        return (
+          typeof actual === 'string' && typeof expected === 'string' && actual.endsWith(expected)
+        );
 
-    case 'gt':
-      return typeof actual === 'number' && typeof expected === 'number' && actual > expected;
+      case 'gt':
+        return typeof actual === 'number' && typeof expected === 'number' && actual > expected;
 
-    case 'gte':
-      return typeof actual === 'number' && typeof expected === 'number' && actual >= expected;
+      case 'gte':
+        return typeof actual === 'number' && typeof expected === 'number' && actual >= expected;
 
-    case 'lt':
-      return typeof actual === 'number' && typeof expected === 'number' && actual < expected;
+      case 'lt':
+        return typeof actual === 'number' && typeof expected === 'number' && actual < expected;
 
-    case 'lte':
-      return typeof actual === 'number' && typeof expected === 'number' && actual <= expected;
+      case 'lte':
+        return typeof actual === 'number' && typeof expected === 'number' && actual <= expected;
 
-    default:
-      return false;
+      default:
+        return false;
+    }
+  } catch {
+    return false;
   }
 }
 
@@ -382,7 +390,7 @@ export function evaluateFilter(rule: unknown, input: FilterInput): boolean {
 
     return evaluateGroup(group, parsedBody, input, 1);
   } catch {
-    return true; // Never throw on bad input
+    return false; // Never throw on bad input: treat as not matched
   }
 }
 
@@ -451,7 +459,8 @@ export function explainFilter(rule: unknown, input: FilterInput): FilterExplanat
           firstFailing.expected !== undefined
             ? ` ${JSON.stringify(truncateString(firstFailing.expected, 50))}`
             : '';
-        reason = `Condition failed: ${firstFailing.field} ${firstFailing.op}${expectedStr}`;
+        const missingSuffix = firstFailing.actual === undefined ? ': field missing' : '';
+        reason = `Condition failed: ${firstFailing.field} ${firstFailing.op}${expectedStr}${missingSuffix}`;
       } else {
         reason = 'Filter conditions did not match';
       }
@@ -463,7 +472,7 @@ export function explainFilter(rule: unknown, input: FilterInput): FilterExplanat
       conditions: conditionResults,
     };
   } catch {
-    return { matched: true, reason: null, conditions: [] };
+    return { matched: false, reason: 'filter error', conditions: [] };
   }
 }
 

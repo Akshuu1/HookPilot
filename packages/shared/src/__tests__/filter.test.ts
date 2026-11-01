@@ -757,4 +757,98 @@ describe('Phase 15: Filter Rule Evaluator & Zod Schema', () => {
       expect(durationMs).toBeLessThan(3000);
     });
   });
+
+  describe('8. Robustness & Missing Field / Error Handling', () => {
+    it('missing field makes condition false, except notExists which is true', () => {
+      const input: FilterInput = { body: { amount: 7000 } }; // no type field
+
+      const eqRule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'eq', value: 'order.paid' }],
+      };
+      const neqRule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'neq', value: 'order.paid' }],
+      };
+      const existsRule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'exists' }],
+      };
+      const notExistsRule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'notExists' }],
+      };
+      const gtRule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.count', op: 'gt', value: 0 }],
+      };
+
+      expect(evaluateFilter(eqRule, input)).toBe(false);
+      expect(evaluateFilter(neqRule, input)).toBe(false);
+      expect(evaluateFilter(existsRule, input)).toBe(false);
+      expect(evaluateFilter(notExistsRule, input)).toBe(true);
+      expect(evaluateFilter(gtRule, input)).toBe(false);
+    });
+
+    it('explainFilter marks missing field with ": field missing" in reason', () => {
+      const rule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'eq', value: 'order.paid' }],
+      };
+      const explanation = explainFilter(rule, { body: { amount: 7000 } });
+
+      expect(explanation.matched).toBe(false);
+      expect(explanation.reason).toContain('body.type eq "order.paid": field missing');
+      expect(explanation.conditions[0].actual).toBeUndefined();
+      expect(explanation.conditions[0].passed).toBe(false);
+    });
+
+    it('null body, undefined body, and invalid JSON do not throw', () => {
+      const rule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'eq', value: 'order.paid' }],
+      };
+
+      const testCases: FilterInput[] = [
+        { body: null },
+        { body: undefined },
+        { body: 'invalid-json-{broken' },
+        { body: '' },
+        { body: '   ' },
+      ];
+
+      for (const tc of testCases) {
+        expect(() => evaluateFilter(rule, tc)).not.toThrow();
+        expect(evaluateFilter(rule, tc)).toBe(false);
+
+        expect(() => explainFilter(rule, tc)).not.toThrow();
+        const exp = explainFilter(rule, tc);
+        expect(exp.matched).toBe(false);
+        expect(exp.reason).toContain(': field missing');
+      }
+    });
+
+    it('returns false and "filter error" when evaluation encounters unexpected throw', () => {
+      // Create an object with a throwing getter
+      const badInput: FilterInput = {
+        body: {
+          get type(): string {
+            throw new Error('Explosion');
+          },
+        },
+      };
+
+      const rule: FilterRule = {
+        combinator: 'and',
+        conditions: [{ field: 'body.type', op: 'eq', value: 'order.paid' }],
+      };
+
+      expect(() => evaluateFilter(rule, badInput)).not.toThrow();
+      expect(evaluateFilter(rule, badInput)).toBe(false);
+
+      expect(() => explainFilter(rule, badInput)).not.toThrow();
+      const explanation = explainFilter(rule, badInput);
+      expect(explanation.matched).toBe(false);
+    });
+  });
 });

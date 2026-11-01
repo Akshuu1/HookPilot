@@ -1,4 +1,5 @@
 import { redactHeaders, type EventPubSubMessage } from '@hookpilot/shared';
+import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/error-handler.js';
 import {
   type EndpointRepository,
@@ -19,7 +20,7 @@ import { Types } from 'mongoose';
 import { DestinationModel } from '../models/Destination.js';
 import { DeliveryModel } from '../models/Delivery.js';
 import { destinationService, invalidateDestinationCache } from './destination.service.js';
-import { explainFilter } from './filter.service.js';
+import { explainFilter, type FilterExplanation } from './filter.service.js';
 import { recomputeEventStatus } from './delivery-status.service.js';
 
 export interface IngestParams {
@@ -234,12 +235,26 @@ export class IngestService {
 
     // 2. Evaluate filter for each destination & prepare Delivery rows
     const deliveriesToInsert = destinations.map((dest) => {
-      const explanation = explainFilter(dest.filter, {
-        body: event.rawBody,
-        headers: event.headers as Record<string, unknown>,
-        method: event.method,
-        contentType: event.contentType,
-      });
+      let explanation: FilterExplanation;
+      try {
+        explanation = explainFilter(dest.filter, {
+          body: event.rawBody,
+          headers: event.headers as Record<string, unknown>,
+          method: event.method,
+          contentType: event.contentType,
+        });
+      } catch (err) {
+        // If evaluation throws for any reason, treat destination as 'filtered' with reason 'filter error'
+        // and log the error WITHOUT the payload!
+        logger.error(
+          {
+            destinationId: dest._id ? String(dest._id) : undefined,
+            error: err instanceof Error ? err.message : String(err),
+          },
+          'Filter evaluation error for destination',
+        );
+        explanation = { matched: false, reason: 'filter error', conditions: [] };
+      }
       const isMatched = explanation.matched;
       return {
         workspaceId: Types.ObjectId.isValid(workspaceId)
@@ -269,7 +284,8 @@ export class IngestService {
 
     // 4. Update Event derived status
     try {
-      await recomputeEventStatus(eventId);
+      const derivedStatus = await recomputeEventStatus(eventId);
+      event.status = derivedStatus;
     } catch {
       // Non-blocking in unmocked unit tests
     }
