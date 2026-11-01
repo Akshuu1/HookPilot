@@ -5,7 +5,7 @@ import { StatusBadge } from '../components/common/StatusBadge.js';
 import type { EventResponse, EventWithAttemptsResponse } from '@hookpilot/shared';
 
 describe('Event Inspector Duplicate Badge and Drawer UI', () => {
-  it('1. Event list row renders neutral duplicate badge "Duplicate x2" with tooltip when duplicateCount > 0', () => {
+  it('1. Event list row renders duplicate badge "Has duplicates (2)" with tooltip when duplicateCount > 0', () => {
     const mockEventWithDuplicates: EventResponse = {
       id: 'evt-dup-1',
       workspaceId: 'ws-1',
@@ -33,23 +33,23 @@ describe('Event Inspector Duplicate Badge and Drawer UI', () => {
         <StatusBadge status={mockEventWithDuplicates.status} size="sm" />
         {mockEventWithDuplicates.duplicateCount && mockEventWithDuplicates.duplicateCount > 0 ? (
           <span
-            title={`Received ${mockEventWithDuplicates.duplicateCount} more times. Last: ${
+            title={`Has duplicates: received ${mockEventWithDuplicates.duplicateCount} duplicate webhooks. Last: ${
               mockEventWithDuplicates.lastDuplicateAt
                 ? new Date(mockEventWithDuplicates.lastDuplicateAt).toLocaleTimeString()
                 : 'recently'
             }`}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700/60 shadow-sm"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30 shadow-sm font-semibold"
           >
-            <Copy className="h-3 w-3 text-zinc-400" />
-            <span>{`Duplicate x${mockEventWithDuplicates.duplicateCount}`}</span>
+            <Copy className="h-3 w-3 text-amber-400" />
+            <span>{`Has duplicates (${mockEventWithDuplicates.duplicateCount})`}</span>
           </span>
         ) : null}
       </div>,
     );
 
     expect(html).toContain('delivered');
-    expect(html).toContain('Duplicate x2');
-    expect(html).toContain('title="Received 2 more times. Last:');
+    expect(html).toContain('Has duplicates (2)');
+    expect(html).toContain('title="Has duplicates: received 2 duplicate webhooks. Last:');
   });
 
   it('2. Event list row hides duplicate badge when duplicateCount is 0', () => {
@@ -78,16 +78,16 @@ describe('Event Inspector Duplicate Badge and Drawer UI', () => {
       <div className="col-span-2 flex items-center gap-1.5 flex-wrap">
         <StatusBadge status={mockEventNoDuplicates.status} size="sm" />
         {mockEventNoDuplicates.duplicateCount && mockEventNoDuplicates.duplicateCount > 0 ? (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
-            <Copy className="h-3 w-3 text-zinc-400" />
-            <span>Duplicate x{mockEventNoDuplicates.duplicateCount}</span>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300">
+            <Copy className="h-3 w-3 text-amber-400" />
+            <span>{`Has duplicates (${mockEventNoDuplicates.duplicateCount})`}</span>
           </span>
         ) : null}
       </div>,
     );
 
     expect(html).toContain('delivered');
-    expect(html).not.toContain('Duplicate x');
+    expect(html).not.toContain('Has duplicates');
   });
 
   it('3. Drawer renders Duplicates section with count, first & last times, duplicate arrivals log, and note', () => {

@@ -62,7 +62,6 @@ export function EventInspectorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string>(urlEndpointId);
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>(urlStatus || 'all');
   const [signatureFilter, setSignatureFilter] = useState<'all' | 'valid' | 'invalid'>('all');
-  const [hasDuplicates, setHasDuplicates] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -108,15 +107,8 @@ export function EventInspectorPage() {
 
   // Infinite query for events
   const queryKey = useMemo(
-    () => [
-      'events',
-      selectedEndpointId,
-      statusFilter,
-      signatureFilter,
-      debouncedSearch,
-      hasDuplicates,
-    ],
-    [selectedEndpointId, statusFilter, signatureFilter, debouncedSearch, hasDuplicates],
+    () => ['events', selectedEndpointId, statusFilter, signatureFilter, debouncedSearch],
+    [selectedEndpointId, statusFilter, signatureFilter, debouncedSearch],
   );
 
   const {
@@ -138,7 +130,6 @@ export function EventInspectorPage() {
       return eventsApi.listEndpointEvents(selectedEndpointId, {
         status: statusFilter === 'all' ? undefined : statusFilter,
         signatureValid: signatureFilter === 'all' ? undefined : signatureFilter === 'valid',
-        hasDuplicates: hasDuplicates ? true : undefined,
         q: debouncedSearch || undefined,
         limit: 30,
         cursor: pageParam as string | undefined,
@@ -507,21 +498,6 @@ export function EventInspectorPage() {
             <option value="invalid">Invalid Only</option>
           </select>
         </div>
-
-        {/* Has Duplicates Filter */}
-        <div className="shrink-0">
-          <button
-            onClick={() => setHasDuplicates((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-medium transition-all border ${
-              hasDuplicates
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm font-semibold'
-                : 'bg-zinc-900/60 text-zinc-400 border-white/[0.08] hover:text-zinc-100 hover:border-white/[0.14]'
-            }`}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            <span>Has duplicates</span>
-          </button>
-        </div>
       </div>
 
       {/* Main Table / Inspector Area */}
@@ -601,11 +577,11 @@ export function EventInspectorPage() {
                       <StatusBadge status={event.status} size="sm" />
                       {event.duplicateCount && event.duplicateCount > 0 ? (
                         <span
-                          title={`Received ${event.duplicateCount} more ${event.duplicateCount === 1 ? 'time' : 'times'}. Last: ${event.lastDuplicateAt ? new Date(event.lastDuplicateAt).toLocaleTimeString() : 'recently'}`}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700/60 shadow-sm"
+                          title={`Has duplicates: received ${event.duplicateCount} duplicate ${event.duplicateCount === 1 ? 'webhook' : 'webhooks'}. Last: ${event.lastDuplicateAt ? new Date(event.lastDuplicateAt).toLocaleTimeString() : 'recently'}`}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30 shadow-sm font-semibold"
                         >
-                          <Copy className="h-3 w-3 text-zinc-400" />
-                          <span>{`Duplicate x${event.duplicateCount}`}</span>
+                          <Copy className="h-3 w-3 text-amber-400" />
+                          <span>{`Has duplicates (${event.duplicateCount})`}</span>
                         </span>
                       ) : null}
                     </div>
@@ -665,9 +641,18 @@ export function EventInspectorPage() {
         onClose={() => setSelectedEventId(null)}
         title={
           drawerEvent ? (
-            <div className="flex items-center gap-3">
-              <span className="font-mono">{drawerEvent.id}</span>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono text-zinc-100 font-bold">{drawerEvent.id}</span>
               <StatusBadge status={drawerEvent.status} size="sm" />
+              {drawerEvent.duplicateCount && drawerEvent.duplicateCount > 0 ? (
+                <span
+                  title={`Received ${drawerEvent.duplicateCount} duplicate ${drawerEvent.duplicateCount === 1 ? 'webhook' : 'webhooks'}.`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30 shadow-sm font-semibold"
+                >
+                  <Copy className="h-3 w-3 text-amber-400" />
+                  <span>{`Has duplicates (${drawerEvent.duplicateCount})`}</span>
+                </span>
+              ) : null}
             </div>
           ) : (
             'Event Details'
@@ -741,8 +726,28 @@ export function EventInspectorPage() {
               </div>
 
               <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Duplicates</span>
+                <span className="font-mono text-zinc-200 font-semibold">
+                  {drawerEvent.duplicateCount && drawerEvent.duplicateCount > 0 ? (
+                    <span className="text-amber-300">
+                      Has duplicates ({drawerEvent.duplicateCount})
+                    </span>
+                  ) : (
+                    'None (0)'
+                  )}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
                 <span className="text-zinc-500 block mb-1">Source IP</span>
                 <span className="font-mono text-zinc-200">{drawerEvent.sourceIp}</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
+                <span className="text-zinc-500 block mb-1">Attempts</span>
+                <span className="font-mono text-zinc-200 font-semibold">
+                  {drawerEvent.attemptCount}
+                </span>
               </div>
 
               <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
