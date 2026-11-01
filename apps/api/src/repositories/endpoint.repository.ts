@@ -20,6 +20,7 @@ export interface CreateEndpointData {
   };
   rateLimitPerMin?: number;
   mode?: EndpointMode;
+  duplicateWindowSeconds?: number;
   isActive?: boolean;
 }
 

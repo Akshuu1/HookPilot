@@ -165,6 +165,7 @@ export const CreateEndpointInputSchema = z.object({
   retryPolicy: RetryPolicySchema.optional(),
   rateLimitPerMin: z.number().int().min(1).max(1000000).default(60),
   mode: z.enum(EndpointModes).default('forward'),
+  duplicateWindowSeconds: z.number().int().min(0).default(10).optional(),
 });
 
 export type CreateEndpointInput = z.infer<typeof CreateEndpointInputSchema>;
@@ -177,6 +178,7 @@ export const UpdateEndpointInputSchema = z.object({
   rateLimitPerMin: z.number().int().min(1).max(1000000).optional(),
   isActive: z.boolean().optional(),
   mode: z.enum(EndpointModes).optional(),
+  duplicateWindowSeconds: z.number().int().min(0).optional(),
 });
 
 export type UpdateEndpointInput = z.infer<typeof UpdateEndpointInputSchema>;
@@ -205,6 +207,7 @@ export const EndpointResponseSchema = z.object({
   rateLimitPerMin: z.number(),
   isActive: z.boolean(),
   mode: z.enum(EndpointModes),
+  duplicateWindowSeconds: z.number().default(10),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -251,6 +254,13 @@ export const IngestResponseSchema = z.object({
 
 export type IngestResponse = z.infer<typeof IngestResponseSchema>;
 
+export const DuplicateLogEntrySchema = z.object({
+  receivedAt: z.string(),
+  reason: z.enum(['idempotency-key', 'window']),
+  sourceIp: z.string(),
+});
+export type DuplicateLogEntry = z.infer<typeof DuplicateLogEntrySchema>;
+
 export const EventResponseSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -263,10 +273,13 @@ export const EventResponseSchema = z.object({
   contentType: z.string().nullable(),
   sourceIp: z.string(),
   signatureValid: z.boolean(),
-  idempotencyKey: z.string(),
+  idempotencyKey: z.string().nullable().optional(),
   status: z.enum(EventStatuses),
   attemptCount: z.number(),
   replayCount: z.number().default(0),
+  duplicateCount: z.number().default(0),
+  lastDuplicateAt: z.string().nullable().optional(),
+  duplicateLog: z.array(DuplicateLogEntrySchema).optional(),
   lastAttemptAt: z.string().datetime().nullable(),
   nextAttemptAt: z.string().datetime().nullable(),
 });
@@ -311,6 +324,8 @@ export const EventPubSubMessageSchema = z.object({
   attemptCount: z.number().optional(),
   deliveryId: z.string().optional(),
   destinationId: z.string().optional(),
+  duplicateCount: z.number().optional(),
+  lastDuplicateAt: z.string().optional(),
   timestamp: z.string().datetime().optional(),
   error: z.string().nullable().optional(),
 });
@@ -432,6 +447,10 @@ export const EventFilterQuerySchema = z.object({
   signatureValid: z.preprocess(
     (val) => (val === '' || val === 'all' || val === null ? undefined : val),
     z.union([z.boolean(), z.string().transform((val) => val === 'true')]).optional(),
+  ),
+  hasDuplicates: z.preprocess(
+    (val) => (val === 'true' || val === true ? true : undefined),
+    z.boolean().optional(),
   ),
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),

@@ -95,6 +95,7 @@ export class EndpointService {
       },
       rateLimitPerMin: input.rateLimitPerMin ?? 60,
       mode: input.mode ?? 'forward',
+      duplicateWindowSeconds: input.duplicateWindowSeconds ?? 10,
       isActive: true,
     });
 
@@ -162,6 +163,9 @@ export class EndpointService {
     if (input.rateLimitPerMin !== undefined) updateDoc['rateLimitPerMin'] = input.rateLimitPerMin;
     if (input.isActive !== undefined) updateDoc['isActive'] = input.isActive;
     if (input.mode !== undefined) updateDoc['mode'] = input.mode;
+    if (input.duplicateWindowSeconds !== undefined) {
+      updateDoc['duplicateWindowSeconds'] = input.duplicateWindowSeconds;
+    }
 
     if (input.retryPolicy) {
       if (input.retryPolicy.maxAttempts !== undefined) {
@@ -273,6 +277,7 @@ export class EndpointService {
       rateLimitPerMin: endpoint.rateLimitPerMin,
       isActive: endpoint.isActive,
       mode: endpoint.mode,
+      duplicateWindowSeconds: endpoint.duplicateWindowSeconds ?? 10,
       createdAt: new Date(endpoint.createdAt).toISOString(),
       updatedAt: new Date(endpoint.updatedAt).toISOString(),
     };

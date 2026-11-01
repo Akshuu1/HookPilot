@@ -25,6 +25,7 @@ export interface IEndpoint extends Document {
   rateLimitPerMin: number;
   isActive: boolean;
   mode: EndpointMode;
+  duplicateWindowSeconds: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +108,11 @@ const endpointSchema = new Schema<IEndpoint>(
       type: String,
       enum: EndpointModes,
       default: 'forward',
+    },
+    duplicateWindowSeconds: {
+      type: Number,
+      default: 10,
+      min: 0,
     },
   },
   {

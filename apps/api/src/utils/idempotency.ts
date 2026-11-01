@@ -1,17 +1,18 @@
-import { createHash } from 'node:crypto';
-
 /**
- * Extracts or derives an idempotency key for an incoming webhook.
- * Precedence:
- * 1. Standard headers (Idempotency-Key, X-Idempotency-Key, X-GitHub-Delivery, etc.)
- * 2. Provider event ID in JSON payload (e.g. Stripe's `evt_...`)
- * 3. Fallback: SHA-256 hash of endpointId + rawBody
+ * Extracts explicit idempotency key for an incoming webhook.
+ * In strict order of precedence:
+ * 1. The Idempotency-Key header (or X-Idempotency-Key)
+ * 2. X-GitHub-Delivery for GitHub
+ * 3. The event id in the body (body.id) when a Stripe signature header is present (stripe-signature)
+ * 4. The Webhook-Id header (Standard Webhooks)
+ *
+ * If no explicit key is found, returns null. NEVER derives a body-hash key!
  */
 export function extractIdempotencyKey(
   headers: Record<string, string | string[] | undefined>,
   rawBody: string,
-  endpointId: string,
-): string {
+  _endpointId?: string,
+): string | null {
   // Normalize header keys
   const normalized: Record<string, string> = {};
   for (const [k, v] of Object.entries(headers)) {
@@ -20,32 +21,36 @@ export function extractIdempotencyKey(
     }
   }
 
-  // Check headers
-  const headerKey =
-    normalized['idempotency-key'] ||
-    normalized['x-idempotency-key'] ||
-    normalized['x-github-delivery'] ||
-    normalized['x-shopify-webhook-id'];
-
-  if (headerKey && headerKey.trim().length > 0) {
-    return headerKey.trim();
+  // 1. Idempotency-Key header (or x-idempotency-key)
+  const idempotencyHeader = normalized['idempotency-key'] || normalized['x-idempotency-key'];
+  if (idempotencyHeader && idempotencyHeader.trim().length > 0) {
+    return idempotencyHeader.trim();
   }
 
-  // Attempt to parse JSON to find event ID
-  if (rawBody.trim().startsWith('{')) {
+  // 2. X-GitHub-Delivery for GitHub
+  const githubDelivery = normalized['x-github-delivery'];
+  if (githubDelivery && githubDelivery.trim().length > 0) {
+    return githubDelivery.trim();
+  }
+
+  // 3. Event id in the body (body.id) when a Stripe signature header is present
+  if (normalized['stripe-signature']) {
     try {
-      const parsed = JSON.parse(rawBody) as { id?: unknown; event_id?: unknown };
+      const parsed = JSON.parse(rawBody) as { id?: unknown };
       if (typeof parsed.id === 'string' && parsed.id.trim().length > 0) {
         return parsed.id.trim();
       }
-      if (typeof parsed.event_id === 'string' && parsed.event_id.trim().length > 0) {
-        return parsed.event_id.trim();
-      }
     } catch {
-      // Body is not valid JSON, proceed to fallback
+      // Body is not valid JSON
     }
   }
 
-  // Deterministic fallback: sha256(endpointId + rawBody)
-  return createHash('sha256').update(`${endpointId}:${rawBody}`).digest('hex');
+  // 4. Webhook-Id header (Standard Webhooks)
+  const webhookId = normalized['webhook-id'];
+  if (webhookId && webhookId.trim().length > 0) {
+    return webhookId.trim();
+  }
+
+  // No explicit key
+  return null;
 }

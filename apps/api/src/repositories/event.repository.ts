@@ -13,7 +13,7 @@ export interface CreateEventData {
   contentType?: string | null;
   sourceIp: string;
   signatureValid: boolean;
-  idempotencyKey: string;
+  idempotencyKey?: string | null;
   status?: EventStatus;
   retentionDays?: number;
 }
@@ -30,6 +30,7 @@ export interface FindEndpointEventsParams {
   from?: Date | undefined;
   to?: Date | undefined;
   signatureValid?: boolean | undefined;
+  hasDuplicates?: boolean | undefined;
   limit?: number | undefined;
   cursor?: CursorData | null | undefined;
 }
@@ -51,6 +52,11 @@ export interface BulkReplayFilterParams {
 
 export interface EventRepository {
   create(data: CreateEventData): Promise<PersistEventResult>;
+  recordDuplicate(
+    eventId: string | Types.ObjectId,
+    reason: 'idempotency-key' | 'window',
+    sourceIp: string,
+  ): Promise<IEvent | null>;
   findById(id: string): Promise<IEvent | null>;
   findByEndpoint(endpointId: string): Promise<IEvent[]>;
   findEndpointEvents(params: FindEndpointEventsParams): Promise<PaginatedEventsResult>;
@@ -77,6 +83,7 @@ export class MongoEventRepository implements EventRepository {
 
       const event = new EventModel({
         ...data,
+        idempotencyKey: data.idempotencyKey || null,
         searchIndex,
         expiresAt,
         workspaceId: new Types.ObjectId(data.workspaceId),
@@ -88,18 +95,45 @@ export class MongoEventRepository implements EventRepository {
     } catch (err: unknown) {
       const mongoErr = err as { code?: number; name?: string };
       // Handle MongoDB unique index violation on { endpointId, idempotencyKey }
-      if (mongoErr.code === 11000) {
+      if (mongoErr.code === 11000 && data.idempotencyKey) {
         const existing = await EventModel.findOne({
           endpointId: new Types.ObjectId(data.endpointId),
           idempotencyKey: data.idempotencyKey,
         });
 
         if (existing) {
-          return { event: existing, isDuplicate: true };
+          const updated = await this.recordDuplicate(
+            existing._id,
+            'idempotency-key',
+            data.sourceIp,
+          );
+          return { event: updated || existing, isDuplicate: true };
         }
       }
       throw err;
     }
+  }
+
+  async recordDuplicate(
+    eventId: string | Types.ObjectId,
+    reason: 'idempotency-key' | 'window',
+    sourceIp: string,
+  ): Promise<IEvent | null> {
+    const now = new Date();
+    return EventModel.findByIdAndUpdate(
+      eventId,
+      {
+        $inc: { duplicateCount: 1 },
+        $set: { lastDuplicateAt: now },
+        $push: {
+          duplicateLog: {
+            $each: [{ receivedAt: now, reason, sourceIp }],
+            $slice: -20,
+          },
+        },
+      },
+      { new: true },
+    );
   }
 
   async findById(id: string): Promise<IEvent | null> {
@@ -130,6 +164,10 @@ export class MongoEventRepository implements EventRepository {
 
     if (params.signatureValid !== undefined) {
       conditions.push({ signatureValid: params.signatureValid });
+    }
+
+    if (params.hasDuplicates) {
+      conditions.push({ duplicateCount: { $gt: 0 } });
     }
 
     if (params.from || params.to) {

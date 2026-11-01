@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { runMigration as runPhase14 } from './migrate-phase14.js';
 import { runMigration as runPhase17 } from './migrate-phase17-alerts.js';
 import { runMigration as runPhase19 } from './migrate-phase19-oauth.js';
+import { runMigration as runDuplicateWindow } from './migrate-duplicate-window.js';
 
 dotenv.config();
 
@@ -34,6 +35,10 @@ export async function runAllMigrations(options: { dryRun?: boolean } = {}) {
     console.log('\n--- Step 3: Phase 19 OAuth Login & Identities Migration ---');
     const res19 = await runPhase19({ dryRun: isDryRun });
 
+    // 4. Duplicate Window & Idempotency Key Cleanup
+    console.log('\n--- Step 4: Duplicate Window & Idempotency Key Migration ---');
+    const resDup = await runDuplicateWindow({ dryRun: isDryRun });
+
     console.log(`\n======================================================`);
     console.log(`✅ All Migrations Completed Successfully!`);
     console.log(`Summary:`);
@@ -46,9 +51,12 @@ export async function runAllMigrations(options: { dryRun?: boolean } = {}) {
     console.log(
       `- Phase 19: ${res19.usersUpdated} users updated, ${res19.indexesCreated} indexes synchronized`,
     );
+    console.log(
+      `- Duplicate Window: ${resDup.endpointsUpdated} endpoints backfilled, ${resDup.bodyHashKeysRemoved} body-hash keys removed, ${resDup.explicitKeysPreserved} explicit keys kept`,
+    );
     console.log(`======================================================\n`);
 
-    return { res14, res17, res19 };
+    return { res14, res17, res19, resDup };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`\n❌ Migration failed: ${errorMsg}`);

@@ -23,6 +23,7 @@ import {
   Send,
   Filter,
   Zap,
+  Copy,
 } from 'lucide-react';
 import type {
   EventResponse,
@@ -61,6 +62,7 @@ export function EventInspectorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string>(urlEndpointId);
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>(urlStatus || 'all');
   const [signatureFilter, setSignatureFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+  const [hasDuplicates, setHasDuplicates] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -106,8 +108,15 @@ export function EventInspectorPage() {
 
   // Infinite query for events
   const queryKey = useMemo(
-    () => ['events', selectedEndpointId, statusFilter, signatureFilter, debouncedSearch],
-    [selectedEndpointId, statusFilter, signatureFilter, debouncedSearch],
+    () => [
+      'events',
+      selectedEndpointId,
+      statusFilter,
+      signatureFilter,
+      debouncedSearch,
+      hasDuplicates,
+    ],
+    [selectedEndpointId, statusFilter, signatureFilter, debouncedSearch, hasDuplicates],
   );
 
   const {
@@ -129,6 +138,7 @@ export function EventInspectorPage() {
       return eventsApi.listEndpointEvents(selectedEndpointId, {
         status: statusFilter === 'all' ? undefined : statusFilter,
         signatureValid: signatureFilter === 'all' ? undefined : signatureFilter === 'valid',
+        hasDuplicates: hasDuplicates ? true : undefined,
         q: debouncedSearch || undefined,
         limit: 30,
         cursor: pageParam as string | undefined,
@@ -172,6 +182,8 @@ export function EventInspectorPage() {
               status: (msg.status as EventStatus) || 'pending',
               attemptCount: msg.attemptCount ?? 0,
               replayCount: 0,
+              duplicateCount: msg.duplicateCount ?? 0,
+              lastDuplicateAt: msg.lastDuplicateAt ?? null,
               lastAttemptAt: null,
               nextAttemptAt: null,
             };
@@ -204,8 +216,14 @@ export function EventInspectorPage() {
                 evt.id === msg.eventId
                   ? {
                       ...evt,
-                      status: msg.status,
-                      attemptCount: msg.attemptCount,
+                      status: msg.status || evt.status,
+                      attemptCount: msg.attemptCount ?? evt.attemptCount,
+                      duplicateCount:
+                        msg.duplicateCount !== undefined ? msg.duplicateCount : evt.duplicateCount,
+                      lastDuplicateAt:
+                        msg.lastDuplicateAt !== undefined
+                          ? msg.lastDuplicateAt
+                          : evt.lastDuplicateAt,
                     }
                   : evt,
               ),
@@ -489,6 +507,21 @@ export function EventInspectorPage() {
             <option value="invalid">Invalid Only</option>
           </select>
         </div>
+
+        {/* Has Duplicates Filter */}
+        <div className="shrink-0">
+          <button
+            onClick={() => setHasDuplicates((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-medium transition-all border ${
+              hasDuplicates
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm font-semibold'
+                : 'bg-zinc-900/60 text-zinc-400 border-white/[0.08] hover:text-zinc-100 hover:border-white/[0.14]'
+            }`}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span>Has duplicates</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Table / Inspector Area */}
@@ -564,8 +597,17 @@ export function EventInspectorPage() {
                     }`}
                   >
                     {/* Status */}
-                    <div className="col-span-2 flex items-center">
+                    <div className="col-span-2 flex items-center gap-1.5 flex-wrap">
                       <StatusBadge status={event.status} size="sm" />
+                      {event.duplicateCount && event.duplicateCount > 0 ? (
+                        <span
+                          title={`Received ${event.duplicateCount} more ${event.duplicateCount === 1 ? 'time' : 'times'}. Last: ${event.lastDuplicateAt ? new Date(event.lastDuplicateAt).toLocaleTimeString() : 'recently'}`}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700/60 shadow-sm"
+                        >
+                          <Copy className="h-3 w-3 text-zinc-400" />
+                          <span>{`Duplicate x${event.duplicateCount}`}</span>
+                        </span>
+                      ) : null}
                     </div>
 
                     {/* Method */}
@@ -694,7 +736,7 @@ export function EventInspectorPage() {
               <div className="p-3 rounded-xl bg-zinc-950/80 border border-white/[0.08]">
                 <span className="text-zinc-500 block mb-1">Idempotency Key</span>
                 <span className="font-mono text-zinc-200 truncate block">
-                  {drawerEvent.idempotencyKey || 'Auto-generated hash'}
+                  {drawerEvent.idempotencyKey || 'None (Duplicate Window)'}
                 </span>
               </div>
 
@@ -741,6 +783,80 @@ export function EventInspectorPage() {
                 language="body"
                 maxHeight="max-h-72"
               />
+            </div>
+
+            {/* Duplicates Section */}
+            <div>
+              <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Copy className="h-3.5 w-3.5 text-zinc-400" />
+                  <span>{`Duplicates (${drawerEvent.duplicateCount || 0})`}</span>
+                </div>
+              </h4>
+
+              {drawerEvent.duplicateCount && drawerEvent.duplicateCount > 0 ? (
+                <div className="rounded-xl border border-white/[0.08] bg-zinc-950/60 p-4 space-y-3 font-mono text-xs">
+                  <div className="grid grid-cols-2 gap-4 pb-2 border-b border-white/[0.04]">
+                    <div>
+                      <span className="text-zinc-500 text-[11px] block">First Duplicate</span>
+                      <span className="text-zinc-200">
+                        {drawerEvent.duplicateLog?.[0]?.receivedAt
+                          ? new Date(drawerEvent.duplicateLog[0].receivedAt).toLocaleString()
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 text-[11px] block">Last Duplicate</span>
+                      <span className="text-zinc-200">
+                        {drawerEvent.lastDuplicateAt
+                          ? new Date(drawerEvent.lastDuplicateAt).toLocaleString()
+                          : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-400 text-[11px] font-semibold uppercase tracking-wider block mb-2">
+                      Recent Duplicate Arrivals (Last {drawerEvent.duplicateLog?.length || 0})
+                    </span>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-white/[0.04] rounded-lg border border-white/[0.06] bg-zinc-900/40">
+                      {drawerEvent.duplicateLog && drawerEvent.duplicateLog.length > 0 ? (
+                        drawerEvent.duplicateLog.map((log, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2.5 text-[11px]"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-zinc-300">
+                                {new Date(log.receivedAt).toLocaleTimeString()}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+                                {log.reason === 'idempotency-key'
+                                  ? 'idempotency key'
+                                  : 'duplicate window'}
+                              </span>
+                            </div>
+                            <span className="text-zinc-500 font-mono">{log.sourceIp}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 text-zinc-500 text-center">
+                          No duplicate arrivals logged.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-500 italic mt-2">
+                    Note: Duplicates are recorded for tracking and auditing purposes, but are not
+                    delivered again to destinations.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-white/[0.08] bg-zinc-950/40 p-4 text-xs text-zinc-500">
+                  No duplicates received for this event.
+                </div>
+              )}
             </div>
 
             {/* Fan-Out Destinations & Delivery Attempts Timeline */}

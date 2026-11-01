@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { redactHeaders, type EventPubSubMessage } from '@hookpilot/shared';
 import { logger } from '../config/logger.js';
 import { AppError } from '../middlewares/error-handler.js';
@@ -124,13 +125,60 @@ export class IngestService {
       throw new AppError('Webhook signature verification failed', 401, 'INVALID_SIGNATURE');
     }
 
-    // Extract idempotency key
+    // Extract explicit idempotency key (header or provider id)
     const idempotencyKey = extractIdempotencyKey(params.headers, params.rawBody, endpointId);
+
+    const windowSec = endpoint.duplicateWindowSeconds ?? 10;
+    let windowDupKey: string | null = null;
+
+    // If no explicit idempotency key and duplicate window is enabled (> 0), check short duplicate window via Redis
+    if (!idempotencyKey && windowSec > 0) {
+      const bodyHash = createHash('sha256').update(params.rawBody).digest('hex');
+      windowDupKey = `dup:${endpointId}:${bodyHash}`;
+
+      try {
+        const redis = getRedisClient();
+        if (redis.status === 'ready' || redis.status === 'connecting') {
+          // Attempt atomic NX lock
+          const setNxRes = await redis.set(windowDupKey, 'PENDING', 'EX', windowSec, 'NX');
+          if (setNxRes !== 'OK') {
+            // Key already exists within window -> duplicate detected!
+            let existingEventId: string | null = null;
+            for (let i = 0; i < 20; i++) {
+              const val = await redis.get(windowDupKey);
+              if (val && val !== 'PENDING') {
+                existingEventId = val;
+                break;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 25));
+            }
+
+            if (existingEventId) {
+              const updated = await this.eventRepo.recordDuplicate(
+                existingEventId,
+                'window',
+                params.sourceIp,
+              );
+              const event = updated || (await this.eventRepo.findById(existingEventId));
+              if (event) {
+                await this.publishEventUpdate(event);
+                return {
+                  eventId: existingEventId,
+                  isDuplicate: true,
+                };
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-blocking in environments without active Redis
+      }
+    }
 
     // Redact sensitive headers for storage
     const sanitizedHeaders = redactHeaders(params.headers);
 
-    // Persist event (returns existing event if duplicate key error occurred)
+    // Persist event (returns existing event if explicit idempotency duplicate occurred)
     const { event, isDuplicate } = await this.eventRepo.create({
       workspaceId,
       endpointId,
@@ -147,47 +195,89 @@ export class IngestService {
 
     const eventId = String(event._id ?? event.id);
 
-    // Fan-out to active destinations
-    if (!isDuplicate) {
-      try {
-        await this.fanOut(event, endpoint);
-      } catch (fanOutErr) {
-        logger.error(
-          {
-            eventId,
-            endpointId,
-            error: fanOutErr instanceof Error ? fanOutErr.message : String(fanOutErr),
-          },
-          'Fan-out execution encountered an unexpected error; event was saved.',
-        );
-      }
-    }
-
-    // Publish event.created to Redis 'events' channel for realtime Socket.IO emission
-    if (!isDuplicate) {
+    // If window key was reserved, update Redis with the actual eventId
+    if (windowDupKey && windowSec > 0) {
       try {
         const redis = getRedisClient();
         if (redis.status === 'ready' || redis.status === 'connecting') {
-          const pubSubMessage: EventPubSubMessage = {
-            type: 'event.created',
-            eventId,
-            endpointId,
-            workspaceId,
-            status: event.status,
-            attemptCount: event.attemptCount,
-            timestamp: event.receivedAt ? event.receivedAt.toISOString() : new Date().toISOString(),
-          };
-          await redis.publish('events', JSON.stringify(pubSubMessage));
+          await redis.set(windowDupKey, eventId, 'EX', windowSec);
         }
       } catch {
-        // Non-blocking in environments without active Redis
+        // Non-blocking
       }
+    }
+
+    if (isDuplicate) {
+      // Explicit idempotencyKey duplicate
+      await this.publishEventUpdate(event);
+      return {
+        eventId,
+        isDuplicate: true,
+      };
+    }
+
+    // Fan-out to active destinations
+    try {
+      await this.fanOut(event, endpoint);
+    } catch (fanOutErr) {
+      logger.error(
+        {
+          eventId,
+          endpointId,
+          error: fanOutErr instanceof Error ? fanOutErr.message : String(fanOutErr),
+        },
+        'Fan-out execution encountered an unexpected error; event was saved.',
+      );
+    }
+
+    // Publish event.created to Redis 'events' channel for realtime Socket.IO emission
+    try {
+      const redis = getRedisClient();
+      if (redis.status === 'ready' || redis.status === 'connecting') {
+        const pubSubMessage: EventPubSubMessage = {
+          type: 'event.created',
+          eventId,
+          endpointId,
+          workspaceId,
+          status: event.status,
+          attemptCount: event.attemptCount,
+          duplicateCount: event.duplicateCount ?? 0,
+          timestamp: event.receivedAt ? event.receivedAt.toISOString() : new Date().toISOString(),
+        };
+        await redis.publish('events', JSON.stringify(pubSubMessage));
+      }
+    } catch {
+      // Non-blocking in environments without active Redis
     }
 
     return {
       eventId,
-      isDuplicate,
+      isDuplicate: false,
     };
+  }
+
+  async publishEventUpdate(event: IEvent): Promise<void> {
+    try {
+      const redis = getRedisClient();
+      if (redis.status === 'ready' || redis.status === 'connecting') {
+        const pubSubMessage: EventPubSubMessage = {
+          type: 'event.update',
+          eventId: String(event._id ?? event.id),
+          endpointId: String(event.endpointId),
+          workspaceId: String(event.workspaceId),
+          status: event.status,
+          attemptCount: event.attemptCount,
+          duplicateCount: event.duplicateCount ?? 0,
+          lastDuplicateAt: event.lastDuplicateAt
+            ? new Date(event.lastDuplicateAt).toISOString()
+            : undefined,
+          timestamp: new Date().toISOString(),
+        };
+        await redis.publish('events', JSON.stringify(pubSubMessage));
+      }
+    } catch {
+      // Non-blocking in environments without active Redis
+    }
   }
 
   async fanOut(event: IEvent, endpoint: IEndpoint): Promise<void> {

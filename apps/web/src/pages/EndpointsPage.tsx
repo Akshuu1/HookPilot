@@ -83,6 +83,7 @@ export function EndpointsPage() {
   const [destinationUrl, setDestinationUrl] = useState('');
   const [mode, setMode] = useState<EndpointMode>('forward');
   const [rateLimitPerMin, setRateLimitPerMin] = useState<number | ''>(60);
+  const [duplicateWindowSeconds, setDuplicateWindowSeconds] = useState<number | ''>(10);
   const [provider, setProvider] = useState<SignatureProvider>('none');
   const [secret, setSecret] = useState('');
   const [headerName, setHeaderName] = useState('');
@@ -264,6 +265,7 @@ export function EndpointsPage() {
     setDestinationUrl('https://httpbin.org/post');
     setMode('forward');
     setRateLimitPerMin(60);
+    setDuplicateWindowSeconds(10);
     setProvider('none');
     setSecret('');
     setHeaderName('');
@@ -281,6 +283,7 @@ export function EndpointsPage() {
     setDestinationUrl(ep.destinationUrl);
     setMode(ep.mode);
     setRateLimitPerMin(ep.rateLimitPerMin);
+    setDuplicateWindowSeconds(ep.duplicateWindowSeconds ?? 10);
     setProvider(ep.signatureConfig.provider);
     setSecret('');
     setHeaderName(ep.signatureConfig.headerName || '');
@@ -329,6 +332,8 @@ export function EndpointsPage() {
       destinationUrl: destinationUrl.trim(),
       mode,
       rateLimitPerMin: finalRateLimit,
+      duplicateWindowSeconds:
+        typeof duplicateWindowSeconds === 'number' ? duplicateWindowSeconds : 10,
       signatureConfig: {
         provider,
         ...(hasSecretToSubmit ? { secret } : {}),
@@ -1031,6 +1036,27 @@ export function EndpointsPage() {
                 <p className="text-[11px] text-amber-400/90 mt-1">Please enter a rate limit.</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+              Duplicate Window (seconds)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={3600}
+              value={duplicateWindowSeconds}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDuplicateWindowSeconds(val === '' ? '' : parseInt(val, 10));
+              }}
+              className="w-full px-3 py-2 rounded-xl border border-white/[0.08] bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-white/30 transition-colors"
+            />
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Deduplicate identical payloads received within this time window (seconds). Set to 0 to
+              disable.
+            </p>
           </div>
 
           {/* Signature Config */}

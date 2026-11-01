@@ -50,10 +50,19 @@ export function toEventResponse(event: IEvent): EventResponse {
     contentType: event.contentType ?? null,
     sourceIp: event.sourceIp || '',
     signatureValid: event.signatureValid ?? false,
-    idempotencyKey: event.idempotencyKey,
+    idempotencyKey: event.idempotencyKey || null,
     status: (event.status as EventStatus) || 'delivered',
     attemptCount: event.attemptCount ?? 0,
     replayCount: event.replayCount || 0,
+    duplicateCount: event.duplicateCount ?? 0,
+    lastDuplicateAt: event.lastDuplicateAt ? new Date(event.lastDuplicateAt).toISOString() : null,
+    duplicateLog: (event.duplicateLog || []).map((entry) => ({
+      receivedAt: entry.receivedAt
+        ? new Date(entry.receivedAt).toISOString()
+        : new Date().toISOString(),
+      reason: entry.reason,
+      sourceIp: entry.sourceIp,
+    })),
     lastAttemptAt: event.lastAttemptAt ? new Date(event.lastAttemptAt).toISOString() : null,
     nextAttemptAt: event.nextAttemptAt ? new Date(event.nextAttemptAt).toISOString() : null,
   };
@@ -101,6 +110,7 @@ export class EventService {
       from,
       to,
       signatureValid: query.signatureValid,
+      hasDuplicates: query.hasDuplicates,
       limit: query.limit,
       cursor,
     });

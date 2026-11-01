@@ -60,6 +60,15 @@ export class IngestController {
       );
 
       // 202 Accepted response with eventId
+      if (result.isDuplicate) {
+        res.setHeader('X-HookPilot-Duplicate', 'true');
+        res.status(202).json({
+          eventId: result.eventId,
+          duplicate: true,
+        });
+        return;
+      }
+
       res.status(202).json({
         eventId: result.eventId,
       });

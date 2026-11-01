@@ -12,10 +12,17 @@ export interface IEvent extends Document {
   contentType?: string | null;
   sourceIp: string;
   signatureValid: boolean;
-  idempotencyKey: string;
+  idempotencyKey?: string | null;
   status: EventStatus;
   attemptCount: number;
   replayCount: number;
+  duplicateCount: number;
+  lastDuplicateAt?: Date | null;
+  duplicateLog: Array<{
+    receivedAt: Date;
+    reason: 'idempotency-key' | 'window';
+    sourceIp: string;
+  }>;
   searchIndex: string;
   lastAttemptAt?: Date | null;
   nextAttemptAt?: Date | null;
@@ -77,7 +84,7 @@ const eventSchema = new Schema<IEvent>(
     },
     idempotencyKey: {
       type: String,
-      required: true,
+      default: null,
       index: true,
     },
     status: {
@@ -93,6 +100,24 @@ const eventSchema = new Schema<IEvent>(
     replayCount: {
       type: Number,
       default: 0,
+    },
+    duplicateCount: {
+      type: Number,
+      default: 0,
+    },
+    lastDuplicateAt: {
+      type: Date,
+      default: null,
+    },
+    duplicateLog: {
+      type: [
+        {
+          receivedAt: { type: Date, required: true },
+          reason: { type: String, enum: ['idempotency-key', 'window'], required: true },
+          sourceIp: { type: String, required: true },
+        },
+      ],
+      default: [],
     },
     searchIndex: {
       type: String,
@@ -120,7 +145,10 @@ const eventSchema = new Schema<IEvent>(
 eventSchema.index({ endpointId: 1, receivedAt: 1 });
 eventSchema.index({ endpointId: 1, receivedAt: -1, _id: -1 });
 eventSchema.index({ workspaceId: 1, status: 1, receivedAt: -1 });
-eventSchema.index({ endpointId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+eventSchema.index(
+  { endpointId: 1, idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } },
+);
 eventSchema.index({ searchIndex: 'text', rawBody: 'text' });
 eventSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
